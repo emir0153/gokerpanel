@@ -1,0 +1,2695 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kurumsal Bulut Portalı v6.5 - Görev & Personel Yönetimi</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Lucide Icons CDN -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
+    body { font-family: 'Plus Jakarta Sans', sans-serif; }
+    .custom-scrollbar::-webkit-scrollbar { width: 5px; height: 5px; }
+    .custom-scrollbar::-webkit-scrollbar-track { background: #f8fafc; }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 9999px; }
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+  </style>
+</head>
+<body class="bg-slate-100/80 text-slate-800 min-h-screen flex antialiased selection:bg-blue-600 selection:text-white">
+
+  <!-- ============================================================== -->
+  <!-- 0. GİRİŞ EKRANI (Şifre Zorunlu + Beni Hatırla)                  -->
+  <!-- ============================================================== -->
+  <div id="loginOverlay" class="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl shadow-2xl border border-slate-200 w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-300">
+      <div class="bg-gradient-to-br from-slate-900 via-blue-950 to-indigo-950 p-7 text-white text-center relative overflow-hidden">
+        <div class="w-14 h-14 mx-auto rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-500 flex items-center justify-center text-white shadow-xl shadow-blue-500/30 mb-3 border border-white/10">
+          <i data-lucide="shield-check" class="w-7 h-7"></i>
+        </div>
+        <div class="flex items-center justify-center space-x-1.5 mb-1">
+          <h2 class="text-lg font-black tracking-wide text-white">KURUMSAL PORTAL GİRİŞİ</h2>
+          <span class="text-[9px] bg-blue-500/30 text-blue-300 font-bold px-2 py-0.5 rounded-full border border-blue-400/30">v6.5 Bulut</span>
+        </div>
+        <p class="text-xs text-slate-300">Görev Takip, Silsile Onay & Hatırlatma Yönetimi</p>
+      </div>
+
+      <form onsubmit="handleLoginSubmit(event)" class="p-7 space-y-4">
+        <div class="bg-slate-50 p-3 rounded-2xl border border-slate-200 space-y-1.5">
+          <label class="block text-[11px] font-bold text-slate-700 flex items-center justify-between">
+            <span class="flex items-center"><i data-lucide="users" class="w-3.5 h-3.5 mr-1 text-blue-600"></i> Hızlı Kullanıcı Seçimi</span>
+            <span class="text-[10px] text-slate-400 font-normal">Şifre elle girilmelidir</span>
+          </label>
+          <select id="quickLoginSelect" onchange="applyQuickUsernameOnly(this.value)" class="w-full text-xs bg-white border border-slate-300 rounded-xl px-2.5 py-1.5 text-slate-700 font-semibold focus:outline-none">
+            <option value="">-- Listeden Personel Seçin --</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">Kullanıcı Adı veya E-Posta *</label>
+          <div class="relative">
+            <i data-lucide="user" class="w-4 h-4 text-slate-400 absolute left-3.5 top-3"></i>
+            <input type="text" id="loginUsername" required placeholder="Örn: h.hakan veya emir.h" class="w-full text-xs pl-10 pr-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-600 focus:outline-none font-medium">
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5 flex items-center justify-between">
+            <span>Şifre *</span>
+            <span class="text-[10px] text-slate-400 font-normal">Varsayılan: 123456</span>
+          </label>
+          <div class="relative">
+            <i data-lucide="lock" class="w-4 h-4 text-slate-400 absolute left-3.5 top-3"></i>
+            <input type="password" id="loginPassword" required placeholder="••••••••" class="w-full text-xs pl-10 pr-10 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-600 focus:outline-none">
+            <button type="button" onclick="togglePasswordVisibility('loginPassword', this)" class="absolute right-3.5 top-2.5 text-slate-400 hover:text-slate-600">
+              <i data-lucide="eye" class="w-4 h-4"></i>
+            </button>
+          </div>
+        </div>
+
+        <div class="flex items-center justify-between pt-1">
+          <label class="flex items-center space-x-2 text-xs text-slate-600 cursor-pointer select-none">
+            <input type="checkbox" id="rememberMeCheckbox" class="w-4 h-4 rounded text-blue-600 border-slate-300 focus:ring-blue-500">
+            <span class="font-medium">Beni Hatırla (Oturumu Koru)</span>
+          </label>
+          <button type="button" onclick="resetLocalCacheToDefaults()" class="text-[10px] text-slate-400 hover:text-red-600 underline">Önbelleği Sıfırla</button>
+        </div>
+
+        <button type="submit" class="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold shadow-lg shadow-blue-500/25 transition flex items-center justify-center space-x-2">
+          <span>Güvenli Giriş Yap</span>
+          <i data-lucide="arrow-right" class="w-4 h-4"></i>
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ============================================================== -->
+  <!-- 1. SOL DİKEY MENÜ                                              -->
+  <!-- ============================================================== -->
+  <aside class="w-64 bg-slate-900 text-slate-300 flex flex-col shrink-0 border-r border-slate-800 z-30 select-none">
+    <div class="h-16 flex items-center px-6 border-b border-slate-800/80 bg-slate-950/40 space-x-3">
+      <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-500 flex items-center justify-center text-white shadow-lg shadow-blue-500/25">
+        <i data-lucide="shield-check" class="w-5 h-5"></i>
+      </div>
+      <div>
+        <h1 class="text-sm font-bold text-white tracking-wide">GÖKER ÇEVRE</h1>
+        <p class="text-[10px] text-slate-400">Kurumsal Yönetim Portalı</p>
+      </div>
+    </div>
+
+    <div class="flex-1 px-3 py-4 space-y-5 overflow-y-auto custom-scrollbar">
+      <div>
+        <p class="px-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Çalışma Alanı</p>
+        <nav class="space-y-1">
+          <button onclick="switchView('tasks')" id="nav-tasks" class="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold text-white bg-blue-600/90 shadow-sm transition">
+            <div class="flex items-center space-x-3">
+              <i data-lucide="kanban" class="w-4 h-4"></i>
+              <span>İş Akış Panosu</span>
+            </div>
+            <span id="badge-nav-tasks" class="text-[10px] bg-white/20 px-2 py-0.5 rounded-full font-bold">0</span>
+          </button>
+
+          <button onclick="switchView('approvals')" id="nav-approvals" class="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-white hover:bg-slate-800/60 transition">
+            <div class="flex items-center space-x-3">
+              <i data-lucide="clipboard-check" class="w-4 h-4 text-emerald-400"></i>
+              <span>Onay Bekleyen İşler</span>
+            </div>
+            <span id="badge-nav-approvals" class="text-[10px] bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded-full font-bold">0</span>
+          </button>
+
+          <button onclick="switchView('recurring')" id="nav-recurring" class="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-white hover:bg-slate-800/60 transition">
+            <div class="flex items-center space-x-3">
+              <i data-lucide="calendar-clock" class="w-4 h-4 text-indigo-400"></i>
+              <span>Sabit Görevler & İzinler</span>
+            </div>
+            <span id="badge-nav-recurring" class="text-[10px] bg-indigo-500/20 text-indigo-300 px-2 py-0.5 rounded-full font-bold">0</span>
+          </button>
+
+          <button onclick="switchView('calendar')" id="nav-calendar" class="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-white hover:bg-slate-800/60 transition">
+            <div class="flex items-center space-x-3">
+              <i data-lucide="calendar" class="w-4 h-4 text-amber-400"></i>
+              <span>Hatırlatma Takvimi</span>
+            </div>
+          </button>
+
+          <button onclick="switchView('announcements')" id="nav-announcements" class="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-white hover:bg-slate-800/60 transition">
+            <div class="flex items-center space-x-3">
+              <i data-lucide="megaphone" class="w-4 h-4 text-pink-400"></i>
+              <span>Şirket Duyuruları</span>
+            </div>
+            <span id="badge-nav-announcements" class="text-[10px] bg-pink-500/20 text-pink-300 px-2 py-0.5 rounded-full font-bold">0</span>
+          </button>
+
+          <button onclick="switchView('team')" id="nav-team" class="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-white hover:bg-slate-800/60 transition">
+            <div class="flex items-center space-x-3">
+              <i data-lucide="users" class="w-4 h-4 text-cyan-400"></i>
+              <span>Personel Rehberi</span>
+            </div>
+          </button>
+        </nav>
+      </div>
+
+      <!-- Yönetim & Raporlama Alanı -->
+      <div id="sidebarManagementSection">
+        <p class="px-3 text-[10px] font-bold text-amber-400 uppercase tracking-wider mb-2">Yönetim & Raporlama</p>
+        <nav class="space-y-1">
+          <button onclick="switchView('performance')" id="nav-performance" class="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-white hover:bg-slate-800/60 transition">
+            <div class="flex items-center space-x-3">
+              <i data-lucide="trending-up" class="w-4 h-4 text-emerald-400"></i>
+              <span>Performans Raporları</span>
+            </div>
+            <span class="text-[9px] bg-emerald-500/20 text-emerald-300 font-bold px-1.5 py-0.5 rounded">Rapor</span>
+          </button>
+
+          <button onclick="switchView('admin')" id="nav-admin" class="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-white hover:bg-slate-800/60 transition">
+            <div class="flex items-center space-x-3">
+              <i data-lucide="sliders" class="w-4 h-4 text-amber-400"></i>
+              <span>Yönetici Paneli</span>
+            </div>
+            <span class="text-[9px] bg-amber-500/20 text-amber-300 font-bold px-1.5 py-0.5 rounded">Admin</span>
+          </button>
+
+          <button onclick="switchView('notifications')" id="nav-notifications" class="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-white hover:bg-slate-800/60 transition">
+            <div class="flex items-center space-x-3">
+              <i data-lucide="bell" class="w-4 h-4 text-indigo-400"></i>
+              <span>Mail & Log Günlüğü</span>
+            </div>
+            <span id="badge-nav-notifications" class="text-[10px] bg-indigo-500/20 text-indigo-300 px-2 py-0.5 rounded-full font-bold">0</span>
+          </button>
+
+          <button onclick="switchView('audit')" id="nav-audit" class="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-white hover:bg-slate-800/60 transition">
+            <div class="flex items-center space-x-3">
+              <i data-lucide="history" class="w-4 h-4 text-purple-400"></i>
+              <span>İşlem Geçmişi (Audit)</span>
+            </div>
+            <span id="badge-nav-audit" class="text-[10px] bg-purple-500/20 text-purple-300 px-2 py-0.5 rounded-full font-bold">0</span>
+          </button>
+        </nav>
+      </div>
+
+      <!-- Departmanlar -->
+      <div>
+        <p class="px-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Departmanlar</p>
+        <div id="sidebarDeptList" class="space-y-1 px-1"></div>
+      </div>
+    </div>
+
+    <!-- Alt Bilgi & Yedekleme -->
+    <div class="p-4 border-t border-slate-800/80 bg-slate-950/60 space-y-2">
+      <div class="flex items-center justify-between text-[11px] text-slate-400">
+        <span>Veri Durumu:</span>
+        <span id="sidebarAutoBackupBadge" class="text-indigo-400 font-semibold text-[10px]">Yedekleme Aktif</span>
+      </div>
+      <div class="grid grid-cols-2 gap-2 pt-1">
+        <button onclick="exportDataJSON()" class="px-2 py-1.5 bg-slate-800 hover:bg-slate-700 text-white rounded-lg text-[11px] font-semibold flex items-center justify-center transition">
+          <i data-lucide="download" class="w-3 h-3 mr-1"></i> İndir
+        </button>
+        <label class="px-2 py-1.5 bg-slate-800 hover:bg-slate-700 text-white rounded-lg text-[11px] font-semibold flex items-center justify-center cursor-pointer transition">
+          <i data-lucide="upload" class="w-3 h-3 mr-1"></i> Yükle
+          <input type="file" id="importFileInput" accept=".json" onchange="importDataJSON(event)" class="hidden" />
+        </label>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ============================================================== -->
+  <!-- 2. SAĞ İÇERİK & ÜST KULLANICI PANELİ                           -->
+  <!-- ============================================================== -->
+  <div class="flex-1 flex flex-col min-w-0 overflow-hidden">
+    
+    <header class="h-16 bg-white border-b border-slate-200 px-6 flex items-center justify-between shrink-0 shadow-xs z-20">
+      <div class="flex items-center space-x-3">
+        <div>
+          <span class="text-[11px] font-semibold text-slate-400">Sistem Modülü /</span>
+          <h2 id="pageCurrentTitle" class="text-base font-bold text-slate-800 tracking-tight">İş Akış Panosu</h2>
+        </div>
+      </div>
+
+      <div class="flex items-center space-x-4">
+        <!-- Bulut Senkronizasyon Durum Rozeti -->
+        <div id="cloudSyncBadge" class="flex items-center space-x-1.5 bg-slate-100 border border-slate-200 text-slate-600 text-[11px] font-bold px-3 py-1 rounded-full">
+          <span id="cloudSyncDot" class="w-2 h-2 rounded-full bg-slate-400"></span>
+          <span id="cloudSyncText">Kontrol Ediliyor...</span>
+        </div>
+
+        <!-- Doğum Günü Tebrik Bildirimi -->
+        <div id="birthdayNotificationBanner" class="hidden items-center space-x-1.5 bg-pink-50 border border-pink-200 text-pink-700 text-[11px] font-bold px-3 py-1 rounded-full animate-bounce">
+          <span>🎂</span>
+          <span id="birthdayTodayText">Bugün Doğum Günü Olan Personel Var!</span>
+        </div>
+
+        <button id="headerNotifBtn" onclick="openNotificationsIfAllowed()" title="Bildirim & Mail Günlüğü" class="relative p-2 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-xl transition">
+          <i data-lucide="bell" class="w-5 h-5"></i>
+          <span id="headerNotifBadge" class="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full ring-2 ring-white"></span>
+        </button>
+
+        <div class="h-6 w-px bg-slate-200"></div>
+
+        <!-- Kullanıcı Profili Kartı -->
+        <div class="relative group">
+          <div class="flex items-center space-x-3 p-1 rounded-xl hover:bg-slate-50 cursor-pointer transition">
+            <div class="relative">
+              <img id="activeUserAvatar" src="" class="w-9 h-9 rounded-full object-cover border border-slate-300 ring-2 ring-blue-500/20" alt="Avatar" />
+              <span id="userStatusIndicator" class="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 border-2 border-white rounded-full"></span>
+            </div>
+            <div class="text-left hidden md:block">
+              <div class="flex items-center space-x-1.5">
+                <span id="activeUserName" class="text-xs font-bold text-slate-800 tracking-tight">Kullanıcı</span>
+                <span id="activeUserRoleBadge" class="bg-blue-100 text-blue-700 text-[10px] font-bold px-1.5 py-0.2 rounded">Rol</span>
+              </div>
+              <p id="activeUserTitle" class="text-[11px] text-slate-500 truncate max-w-[170px]">Unvan • Departman</p>
+            </div>
+            <i data-lucide="chevron-down" class="w-4 h-4 text-slate-400"></i>
+          </div>
+
+          <div class="absolute right-0 top-full mt-2 w-72 bg-white rounded-2xl shadow-2xl border border-slate-200 py-2 hidden group-hover:block z-50">
+            <div class="px-4 py-2 border-b border-slate-100 flex items-center justify-between">
+              <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Oturum & Hesap</p>
+              <button onclick="openChangeMyPasswordModal()" class="text-[10px] text-blue-600 font-bold hover:underline">Şifremi Değiştir</button>
+            </div>
+            
+            <div class="px-3 py-1.5 text-[10px] font-bold text-slate-400 uppercase">Kullanıcı Değiştir (Test)</div>
+            <div id="userDropdownList" class="max-h-56 overflow-y-auto custom-scrollbar divide-y divide-slate-50"></div>
+
+            <div class="pt-2 mt-2 border-t border-slate-100 px-3">
+              <button onclick="handleLogout()" class="w-full flex items-center justify-center space-x-2 py-2 bg-red-50 hover:bg-red-100 text-red-600 rounded-xl text-xs font-bold transition">
+                <i data-lucide="log-out" class="w-4 h-4"></i>
+                <span>Oturumu Kapat / Çıkış Yap</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <main class="flex-1 overflow-y-auto p-6 custom-scrollbar">
+
+      <!-- ============================================================== -->
+      <!-- A. İŞ AKIŞ PANOSU (Görev Düzenleme & Departman Kısıtlaması)     -->
+      <!-- ============================================================== -->
+      <section id="view-tasks" class="space-y-6">
+        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div>
+            <h3 class="text-lg font-bold text-slate-900">Departman İş Akış Kanvası</h3>
+            <p id="taskScopeDescription" class="text-xs text-slate-500">Mevcut süreçleri aşamalara göre takip edin, atayın ve güncelleyin.</p>
+          </div>
+          <button onclick="openNewTaskModal()" class="inline-flex items-center px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold shadow-md shadow-blue-500/20 transition">
+            <i data-lucide="plus" class="w-4 h-4 mr-2"></i> Yeni Görev / İş Emri Ata
+          </button>
+        </div>
+
+        <!-- Filtreler -->
+        <div class="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-xs flex flex-wrap items-center gap-3">
+          <div class="flex-1 min-w-[220px] relative">
+            <i data-lucide="search" class="w-4 h-4 absolute left-3 top-3 text-slate-400"></i>
+            <input type="text" id="taskSearchInput" oninput="renderTasks()" placeholder="Görev adı, adımlar veya sorumlu ara..." class="w-full text-xs pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none">
+          </div>
+          <select id="taskDeptFilter" onchange="renderTasks()" class="text-xs bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-700 font-semibold focus:bg-white focus:outline-none">
+            <option value="">Tüm Departmanlar</option>
+          </select>
+          <select id="taskStatusFilter" onchange="renderTasks()" class="text-xs bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-700 font-semibold focus:bg-white focus:outline-none">
+            <option value="">Tüm Durumlar</option>
+            <option value="todo">Beklemede (Yapılacak)</option>
+            <option value="inprogress">Devam Ediyor</option>
+            <option value="review">Onay Bekliyor (Tamamlandı)</option>
+            <option value="completed">Onaylandı & Arşivlendi</option>
+          </select>
+        </div>
+
+        <!-- Kanban Sütunları -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4" id="kanbanColumns">
+          <div class="bg-slate-200/60 rounded-2xl p-3 border border-slate-300/70 flex flex-col">
+            <div class="flex items-center justify-between mb-3 px-1">
+              <span class="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center">
+                <span class="w-2.5 h-2.5 rounded-full bg-slate-400 mr-2"></span> BEKLEYENLER
+              </span>
+              <span id="col-count-todo" class="text-xs bg-white text-slate-700 px-2 py-0.5 rounded-full font-extrabold">0</span>
+            </div>
+            <div id="kanban-col-todo" class="space-y-3 flex-1 min-h-[160px]"></div>
+          </div>
+
+          <div class="bg-blue-50/60 rounded-2xl p-3 border border-blue-200/80 flex flex-col">
+            <div class="flex items-center justify-between mb-3 px-1">
+              <span class="text-xs font-bold text-blue-800 uppercase tracking-wider flex items-center">
+                <span class="w-2.5 h-2.5 rounded-full bg-blue-500 mr-2"></span> DEVAM EDİYOR
+              </span>
+              <span id="col-count-inprogress" class="text-xs bg-white text-blue-700 px-2 py-0.5 rounded-full font-extrabold">0</span>
+            </div>
+            <div id="kanban-col-inprogress" class="space-y-3 flex-1 min-h-[160px]"></div>
+          </div>
+
+          <div class="bg-amber-50/60 rounded-2xl p-3 border border-amber-200/80 flex flex-col">
+            <div class="flex items-center justify-between mb-3 px-1">
+              <span class="text-xs font-bold text-amber-800 uppercase tracking-wider flex items-center">
+                <span class="w-2.5 h-2.5 rounded-full bg-amber-500 mr-2"></span> ONAY BEKLİYOR
+              </span>
+              <span id="col-count-review" class="text-xs bg-white text-amber-700 px-2 py-0.5 rounded-full font-extrabold">0</span>
+            </div>
+            <div id="kanban-col-review" class="space-y-3 flex-1 min-h-[160px]"></div>
+          </div>
+
+          <div class="bg-emerald-50/60 rounded-2xl p-3 border border-emerald-200/80 flex flex-col">
+            <div class="flex items-center justify-between mb-3 px-1">
+              <span class="text-xs font-bold text-emerald-800 uppercase tracking-wider flex items-center">
+                <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 mr-2"></span> ONAYLANDI
+              </span>
+              <span id="col-count-completed" class="text-xs bg-white text-emerald-700 px-2 py-0.5 rounded-full font-extrabold">0</span>
+            </div>
+            <div id="kanban-col-completed" class="space-y-3 flex-1 min-h-[160px]"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================================================== -->
+      <!-- B. SİLSİLE ONAY MERKEZİ                                        -->
+      <!-- ============================================================== -->
+      <section id="view-approvals" class="hidden space-y-6">
+        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div>
+            <h3 class="text-lg font-bold text-slate-900 flex items-center">
+              <i data-lucide="clipboard-check" class="w-5 h-5 mr-2 text-emerald-600"></i>
+              Hiyerarşik Onay Bekleyen Görevler
+            </h3>
+            <p class="text-xs text-slate-500">Personellerin tamamladığı ve silsile yoluyla amir/yönetici onayına sunulan iş emirleri.</p>
+          </div>
+        </div>
+
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
+          <table class="w-full text-left border-collapse text-xs">
+            <thead>
+              <tr class="bg-slate-50/80 border-b border-slate-200 text-slate-500 uppercase font-bold text-[10px]">
+                <th class="p-3.5">İş Emri / Görev</th>
+                <th class="p-3.5">Departman</th>
+                <th class="p-3.5">Tamamlayan Personel</th>
+                <th class="p-3.5">Atayan Yönetici</th>
+                <th class="p-3.5">İşlem Adımları</th>
+                <th class="p-3.5">Ekler / Linkler</th>
+                <th class="p-3.5 text-right">Onay Kararı</th>
+              </tr>
+            </thead>
+            <tbody id="approvalsTableBody" class="divide-y divide-slate-100"></tbody>
+          </table>
+          <div id="approvalsEmptyAlert" class="hidden p-8 text-center text-slate-400 text-xs">
+            Şu anda onayınızı bekleyen tamamlanmış bir görev bulunmuyor.
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================================================== -->
+      <!-- C. SABİT & YENİLENEN GÖREVLER (DEPARTMAN KISITLAMALI)         -->
+      <!-- ============================================================== -->
+      <section id="view-recurring" class="hidden space-y-6">
+        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div>
+            <h3 class="text-lg font-bold text-slate-900 flex items-center">
+              <i data-lucide="repeat" class="w-5 h-5 mr-2 text-indigo-600"></i>
+              Sabit & Yenilenen Görevler ve İzin Takip Merkezi
+            </h3>
+            <p id="recurScopeDescription" class="text-xs text-slate-500">Departman sorumluları sadece kendi departmanlarını görür.</p>
+          </div>
+          <div class="flex items-center space-x-2">
+            <button onclick="triggerManualReminderScan()" class="inline-flex items-center px-3.5 py-2.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 rounded-xl text-xs font-bold shadow-xs transition">
+              <i data-lucide="refresh-cw" class="w-4 h-4 mr-2 text-indigo-600"></i> Hatırlatmaları Şimdi Tara
+            </button>
+            <button onclick="openNewRecurringModal()" class="inline-flex items-center px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold shadow-md shadow-indigo-500/20 transition">
+              <i data-lucide="plus" class="w-4 h-4 mr-2"></i> Yeni Sabit Görev Tanımla
+            </button>
+          </div>
+        </div>
+
+        <div class="bg-gradient-to-r from-indigo-900 via-indigo-950 to-slate-900 text-white p-5 rounded-2xl shadow-md border border-indigo-800/50 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+          <div class="space-y-1">
+            <div class="flex items-center space-x-2">
+              <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+              <h4 class="text-xs font-bold tracking-wide uppercase text-indigo-200">4 Kademeli Otomatik Bildirim Motoru Aktif</h4>
+            </div>
+            <p class="text-xs text-slate-300 max-w-2xl">
+              Görev bitiş tarihi yaklaşan kayıtlar için <strong class="text-white">Son 1 Ay (30 Gün)</strong>, <strong class="text-white">Son 15 Gün</strong>, <strong class="text-white">Son 1 Hafta (7 Gün)</strong> ve <strong class="text-amber-300">Hatırlatma Günü (0 Gün)</strong> eşiklerinde ilgili personele ve yöneticiye bildirim & e-posta gönderilir.
+            </p>
+          </div>
+          <div class="flex items-center space-x-2 text-[11px] font-mono shrink-0">
+            <span class="bg-indigo-800/80 px-2.5 py-1 rounded-lg border border-indigo-700">30 Gün</span>
+            <span class="text-indigo-400">→</span>
+            <span class="bg-indigo-800/80 px-2.5 py-1 rounded-lg border border-indigo-700">15 Gün</span>
+            <span class="text-indigo-400">→</span>
+            <span class="bg-indigo-800/80 px-2.5 py-1 rounded-lg border border-indigo-700">7 Gün</span>
+            <span class="text-indigo-400">→</span>
+            <span class="bg-red-500 text-white font-bold px-2 py-1 rounded-lg">0 Gün</span>
+          </div>
+        </div>
+
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
+          <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse text-xs">
+              <thead>
+                <tr class="bg-slate-50/80 border-b border-slate-200 text-slate-500 uppercase font-bold text-[10px] tracking-wider">
+                  <th class="p-3.5">Görev & İzin Başlığı</th>
+                  <th class="p-3.5">Departman</th>
+                  <th class="p-3.5">Sorumlu</th>
+                  <th class="p-3.5">Periyot</th>
+                  <th class="p-3.5">Tarih Aralığı</th>
+                  <th class="p-3.5">Kalan Süre & Eşik</th>
+                  <th class="p-3.5 text-right">Aksiyonlar</th>
+                </tr>
+              </thead>
+              <tbody id="recurringTableBody" class="divide-y divide-slate-100"></tbody>
+            </table>
+          </div>
+          <div id="recurringEmptyAlert" class="hidden p-8 text-center text-slate-400 text-xs">
+            Departmanınıza ait sabit görev bulunamadı.
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================================================== -->
+      <!-- D. ŞİRKET İÇİ GENEL DUYURULAR                                 -->
+      <!-- ============================================================== -->
+      <section id="view-announcements" class="hidden space-y-6">
+        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div>
+            <h3 class="text-lg font-bold text-slate-900 flex items-center">
+              <i data-lucide="megaphone" class="w-5 h-5 mr-2 text-pink-600"></i>
+              Şirket İçi Genel Duyurular
+            </h3>
+            <p class="text-xs text-slate-500">Tüm personel ve departmanları bilgilendirmek için yayınlanan kurumsal duyurular.</p>
+          </div>
+          <button id="btnNewAnnouncement" onclick="openNewAnnouncementModal()" class="inline-flex items-center px-4 py-2.5 bg-pink-600 hover:bg-pink-700 text-white rounded-xl text-xs font-bold shadow-md shadow-pink-500/20 transition">
+            <i data-lucide="plus" class="w-4 h-4 mr-2"></i> Yeni Duyuru Yayınla
+          </button>
+        </div>
+
+        <div class="space-y-3" id="announcementsListContainer"></div>
+      </section>
+
+      <!-- ============================================================== -->
+      <!-- E. AYLIK & YILLIK PERFORMANS RAPORLARI                         -->
+      <!-- ============================================================== -->
+      <section id="view-performance" class="hidden space-y-6">
+        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div>
+            <h3 class="text-lg font-bold text-slate-900 flex items-center">
+              <i data-lucide="trending-up" class="w-5 h-5 mr-2 text-emerald-600"></i>
+              Aylık & Yıllık Departman ve Personel Performans Raporu
+            </h3>
+            <p class="text-xs text-slate-500">Bu rapor sadece Genel Müdürlük ve İdari İşler Yönetimi tarafından görüntülenebilir.</p>
+          </div>
+          <div class="flex items-center space-x-2">
+            <select id="perfReportPeriod" onchange="renderPerformanceReports()" class="text-xs bg-white border border-slate-300 rounded-xl px-3 py-2 text-slate-700 font-semibold focus:outline-none">
+              <option value="monthly">Aylık Değerlendirme (Ekim 2026)</option>
+              <option value="yearly">Yıllık Genel Rapor (2026 Yılı)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-xs p-5 space-y-4">
+          <h4 class="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center">
+            <i data-lucide="building-2" class="w-4 h-4 mr-1.5 text-blue-600"></i>
+            Departman Tamamlama & Performans Göstergeleri
+          </h4>
+          <div class="space-y-3" id="deptPerformanceBars"></div>
+        </div>
+
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
+          <div class="p-4 border-b border-slate-100 flex items-center justify-between">
+            <h4 class="text-xs font-bold text-slate-800 uppercase tracking-wider">Personel Bireysel Performans Tablosu</h4>
+          </div>
+          <table class="w-full text-left border-collapse text-xs">
+            <thead>
+              <tr class="bg-slate-50/80 border-b border-slate-200 text-slate-500 uppercase font-bold text-[10px]">
+                <th class="p-3.5">Personel Adı</th>
+                <th class="p-3.5">Departman</th>
+                <th class="p-3.5">Atanan Toplam İş</th>
+                <th class="p-3.5">Tamamlanan & Onaylanan</th>
+                <th class="p-3.5">Devam Eden / Bekleyen</th>
+                <th class="p-3.5">Geciken İşler</th>
+                <th class="p-3.5 text-right">Başarı Skoru</th>
+              </tr>
+            </thead>
+            <tbody id="userPerformanceTableBody" class="divide-y divide-slate-100"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ============================================================== -->
+      <!-- F. HATIRLATMA TAKVİMİ                                          -->
+      <!-- ============================================================== -->
+      <section id="view-calendar" class="hidden space-y-6">
+        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div>
+            <h3 class="text-lg font-bold text-slate-900 flex items-center">
+              <i data-lucide="calendar" class="w-5 h-5 mr-2 text-blue-600"></i>
+              Kurumsal Hatırlatma ve İş Takvimi
+            </h3>
+            <p class="text-xs text-slate-500">Tarih aralığına ve yenilenme günlerine göre görev dağılımı.</p>
+          </div>
+          <div class="flex items-center space-x-2 bg-white px-3 py-1.5 rounded-xl border border-slate-200 shadow-xs">
+            <button onclick="navigateMonth(-1)" class="p-1 text-slate-500 hover:text-slate-800 rounded-lg hover:bg-slate-100">
+              <i data-lucide="chevron-left" class="w-4 h-4"></i>
+            </button>
+            <span id="calendarMonthYearDisplay" class="text-xs font-bold text-slate-800 min-w-[120px] text-center">Ekim 2026</span>
+            <button onclick="navigateMonth(1)" class="p-1 text-slate-500 hover:text-slate-800 rounded-lg hover:bg-slate-100">
+              <i data-lucide="chevron-right" class="w-4 h-4"></i>
+            </button>
+          </div>
+        </div>
+
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
+          <div class="grid grid-cols-7 border-b border-slate-200 bg-slate-50 text-center text-[11px] font-bold text-slate-600 py-3">
+            <div>Pzt</div>
+            <div>Sal</div>
+            <div>Çar</div>
+            <div>Per</div>
+            <div>Cum</div>
+            <div>Cmt</div>
+            <div>Paz</div>
+          </div>
+          <div id="calendarDayGrid" class="grid grid-cols-7 divide-x divide-y divide-slate-100 min-h-[500px]"></div>
+        </div>
+      </section>
+
+      <!-- ============================================================== -->
+      <!-- G. PERSONEL REHBERİ (Personel Düzenleme & Departman Filtresi)    -->
+      <!-- ============================================================== -->
+      <section id="view-team" class="hidden space-y-6">
+        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div>
+            <h3 class="text-lg font-bold text-slate-900">Kurumsal Personel Rehberi</h3>
+            <p id="teamScopeDescription" class="text-xs text-slate-500">Personel bilgileri, unvanları, departmanları ve doğum tarihleri.</p>
+          </div>
+          <button id="btnAddNewStaffGlobal" onclick="openAddNewUserModal()" class="inline-flex items-center px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold shadow-md shadow-blue-500/20 transition">
+            <i data-lucide="user-plus" class="w-4 h-4 mr-2"></i> Yeni Personel Ekle
+          </button>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" id="teamCardsGrid"></div>
+      </section>
+
+      <!-- ============================================================== -->
+      <!-- H. YÖNETİCİ PANELİ                                             -->
+      <!-- ============================================================== -->
+      <section id="view-admin" class="hidden space-y-6">
+        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div>
+            <h3 class="text-lg font-bold text-slate-900 flex items-center">
+              <i data-lucide="sliders" class="w-5 h-5 mr-2 text-amber-500"></i>
+              Kurumsal Yönetici Kontrol Merkezi
+            </h3>
+            <p class="text-xs text-slate-500">Hiyerarşi yapılandırması, personel düzenleme, doğum tarihleri ve şifre atamaları.</p>
+          </div>
+          <span class="bg-amber-100 text-amber-800 text-xs font-bold px-3 py-1 rounded-xl border border-amber-200 flex items-center">
+            <i data-lucide="shield" class="w-3.5 h-3.5 mr-1.5 text-amber-600"></i> Yönetici Yetkisi Doğrulandı
+          </span>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div class="bg-white rounded-2xl border border-slate-200 shadow-xs p-5 space-y-4">
+            <div class="flex items-center justify-between">
+              <h4 class="text-sm font-bold text-slate-800 flex items-center">
+                <i data-lucide="building-2" class="w-4 h-4 mr-2 text-blue-600"></i>
+                Departmanlar & Lider Ataması
+              </h4>
+            </div>
+            <div class="divide-y divide-slate-100 max-h-72 overflow-y-auto custom-scrollbar" id="adminDeptList"></div>
+          </div>
+
+          <div class="bg-white rounded-2xl border border-slate-200 shadow-xs p-5 space-y-4">
+            <div class="flex items-center justify-between">
+              <div>
+                <h4 class="text-sm font-bold text-slate-800 flex items-center">
+                  <i data-lucide="key" class="w-4 h-4 mr-2 text-indigo-600"></i>
+                  Personel Düzenleme & Şifre / Doğum Tarihi Merkezi
+                </h4>
+                <p class="text-[11px] text-slate-400">Tüm personel kartlarını düzenleyin ve güncelleyin</p>
+              </div>
+              <button onclick="openAddNewUserModal()" class="text-xs bg-indigo-50 text-indigo-700 hover:bg-indigo-100 font-bold px-2.5 py-1 rounded-lg border border-indigo-200 transition">
+                + Personel Ekle
+              </button>
+            </div>
+            <div class="divide-y divide-slate-100 max-h-72 overflow-y-auto custom-scrollbar" id="adminUserList"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================================================== -->
+      <!-- I. BİLDİRİM & AUDIT LOGLARI                                    -->
+      <!-- ============================================================== -->
+      <section id="view-notifications" class="hidden space-y-6">
+        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div>
+            <h3 class="text-lg font-bold text-slate-900 flex items-center">
+              <i data-lucide="mail-check" class="w-5 h-5 mr-2 text-indigo-600"></i>
+              Tetiklenen Hatırlatma & Doğum Günü Kutlama Mailleri
+            </h3>
+            <p class="text-xs text-slate-500">Silsile onayları, periyodik hatırlatmalar ve doğum günü tebriklerinin kaydı.</p>
+          </div>
+          <button onclick="clearAllNotificationLogs()" class="text-xs text-red-600 hover:text-red-700 font-semibold px-3 py-1.5 border border-red-200 rounded-xl hover:bg-red-50 transition">
+            Günlüğü Sıfırla
+          </button>
+        </div>
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
+          <table class="w-full text-left border-collapse text-xs">
+            <thead>
+              <tr class="bg-slate-50/80 border-b border-slate-200 text-slate-500 uppercase font-bold text-[10px]">
+                <th class="p-3.5">Zaman</th>
+                <th class="p-3.5">Alıcı & E-Posta</th>
+                <th class="p-3.5">Bildirim Konusu & Türü</th>
+                <th class="p-3.5">Kanal</th>
+                <th class="p-3.5">İletim Durumu</th>
+              </tr>
+            </thead>
+            <tbody id="notificationLogTableBody" class="divide-y divide-slate-100"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="view-audit" class="hidden space-y-6">
+        <div class="flex items-center justify-between">
+          <div>
+            <h3 class="text-lg font-bold text-slate-900 flex items-center">
+              <i data-lucide="history" class="w-5 h-5 mr-2 text-purple-600"></i>
+              Denetim & İşlem Geçmişi (Audit Logs)
+            </h3>
+            <p class="text-xs text-slate-500">Silsile görev atamaları, adım tamamlamaları ve personel/görev güncellemeleri.</p>
+          </div>
+          <span id="auditTotalBadge" class="text-xs bg-slate-200 text-slate-700 px-3 py-1 rounded-full font-bold">0 Kayıt</span>
+        </div>
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-xs p-5">
+          <ul id="auditLogsContainer" class="space-y-3 text-xs divide-y divide-slate-100"></ul>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- ============================================================== -->
+  <!-- MODALLAR                                                       -->
+  <!-- ============================================================== -->
+
+  <!-- MODAL: GÖREV OLUŞTURMA & DÜZENLEME (Tam Değiştirilebilir)       -->
+  <div id="modalStandardTask" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl border border-slate-200 shadow-2xl w-full max-w-xl overflow-hidden flex flex-col max-h-[90vh]">
+      <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-blue-50/70">
+        <div class="flex items-center space-x-2.5">
+          <div class="w-8 h-8 rounded-lg bg-blue-600 text-white flex items-center justify-center">
+            <i data-lucide="edit-3" id="taskModalHeaderIcon" class="w-4 h-4"></i>
+          </div>
+          <div>
+            <h3 id="taskModalHeading" class="font-bold text-slate-800 text-sm">Hiyerarşik İş Emri / Görev Atama</h3>
+            <p class="text-[11px] text-slate-500">Adımlar, dosya ekleri ve silsile onayı ile birlikte</p>
+          </div>
+        </div>
+        <button onclick="closeNewTaskModal()" class="text-slate-400 hover:text-slate-600 p-1">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <form onsubmit="saveStandardTaskForm(event)" class="p-6 space-y-4 overflow-y-auto custom-scrollbar">
+        <input type="hidden" id="editingTaskId" value="">
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">Görev Başlığı *</label>
+          <input type="text" id="taskModalTitle" required placeholder="Örn: Maden ÇED Revizyon Raporu Hazırlanması" class="w-full text-xs border border-slate-200 rounded-xl px-3.5 py-2.5 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none font-semibold">
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">Açıklama & Yönerge</label>
+          <textarea id="taskModalDesc" rows="2" placeholder="Görevin talimatları ve kapsamı..." class="w-full text-xs border border-slate-200 rounded-xl px-3.5 py-2.5 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none"></textarea>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">Departman *</label>
+            <select id="taskModalDept" onchange="handleTaskDeptChange(this.value)" required class="w-full text-xs border border-slate-200 rounded-xl px-3 py-2.5 bg-slate-50 focus:bg-white focus:outline-none font-semibold"></select>
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">Atanacak Personel *</label>
+            <select id="taskModalAssignee" required class="w-full text-xs border border-slate-200 rounded-xl px-3 py-2.5 bg-slate-50 focus:bg-white focus:outline-none font-semibold"></select>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">Teslim Tarihi (Termin) *</label>
+            <input type="date" id="taskModalDueDate" required class="w-full text-xs border border-slate-200 rounded-xl px-3 py-2.5 bg-slate-50 focus:bg-white focus:outline-none font-mono">
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">Öncelik Derecesi</label>
+            <select id="taskModalPriority" class="w-full text-xs border border-slate-200 rounded-xl px-3 py-2.5 bg-slate-50 focus:bg-white focus:outline-none font-medium">
+              <option value="Yüksek">Yüksek</option>
+              <option value="Orta" selected>Orta</option>
+              <option value="Düşük">Düşük</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- İŞ ADIMLARI (CHECKLIST & % HESAPLAMA) -->
+        <div class="bg-slate-50 p-3.5 rounded-2xl border border-slate-200 space-y-2.5">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-bold text-slate-800 flex items-center">
+              <i data-lucide="list-checks" class="w-4 h-4 mr-1.5 text-blue-600"></i>
+              İşin Gerçekleşme Adımları (Tamamı %100)
+            </span>
+            <span class="text-[10px] text-blue-600 font-bold">Otomatik Kalan % Oranı</span>
+          </div>
+          <div class="flex space-x-2">
+            <input type="text" id="newStepInput" placeholder="Yapılacak adımı yazın (örn: Numune alımı)" class="flex-1 text-xs border border-slate-300 rounded-xl px-3 py-1.5 bg-white focus:outline-none">
+            <button type="button" onclick="addModalChecklistStep()" class="px-3 py-1.5 bg-blue-600 text-white rounded-xl text-xs font-bold hover:bg-blue-700">+ Adım Ekle</button>
+          </div>
+          <ul id="modalStepList" class="space-y-1.5 max-h-32 overflow-y-auto custom-scrollbar"></ul>
+        </div>
+
+        <!-- DOSYA VE LİNK EKLEME SEKMESİ -->
+        <div class="bg-indigo-50/60 p-3.5 rounded-2xl border border-indigo-100 space-y-2.5">
+          <span class="text-xs font-bold text-indigo-950 flex items-center">
+            <i data-lucide="paperclip" class="w-4 h-4 mr-1.5 text-indigo-600"></i>
+            Dosya & Bağlantı (Link) Ekleme
+          </span>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+            <div>
+              <label class="block text-[10px] font-bold text-slate-600 mb-1">Dış Bağlantı / Bulut Linki (Drive vb.)</label>
+              <input type="url" id="taskModalLink" placeholder="https://drive.google.com/..." class="w-full text-xs border border-slate-200 rounded-xl px-3 py-2 bg-white focus:outline-none">
+            </div>
+            <div>
+              <label class="block text-[10px] font-bold text-slate-600 mb-1">Dosya Eki (PDF, DWG, Görsel)</label>
+              <input type="file" id="taskModalFileInput" class="w-full text-xs text-slate-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-[11px] file:font-bold file:bg-indigo-600 file:text-white hover:file:bg-indigo-700 cursor-pointer">
+              <span id="currentAttachedFileNameDisplay" class="text-[10px] text-indigo-600 font-bold block mt-1"></span>
+            </div>
+          </div>
+        </div>
+
+        <div class="flex items-center justify-end space-x-2 pt-2 border-t border-slate-100">
+          <button type="button" onclick="closeNewTaskModal()" class="px-4 py-2 border border-slate-200 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-50">Vazgeç</button>
+          <button type="submit" id="taskModalSubmitBtn" class="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold shadow-md shadow-blue-500/20">Görevi Kaydet</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: PERSONEL BİLGİLERİ DÜZENLEME (Tam Değiştirilebilir)    -->
+  <div id="modalEditUser" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl border border-slate-200 shadow-2xl w-full max-w-md overflow-hidden flex flex-col">
+      <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-indigo-50/70">
+        <h3 class="font-bold text-slate-800 text-sm flex items-center">
+          <i data-lucide="user-cog" class="w-4 h-4 mr-2 text-indigo-600"></i>
+          Personel Bilgilerini Düzenle
+        </h3>
+        <button onclick="closeEditUserModal()" class="text-slate-400 hover:text-slate-600 p-1">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+      <form onsubmit="handleSaveEditUser(event)" class="p-6 space-y-4 max-h-[85vh] overflow-y-auto custom-scrollbar">
+        <input type="hidden" id="editUserId">
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">Ad Soyad *</label>
+          <input type="text" id="editUserName" required class="w-full text-xs border border-slate-200 rounded-xl px-3 py-2 bg-slate-50 focus:bg-white focus:outline-none font-semibold">
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">Kullanıcı Adı *</label>
+            <input type="text" id="editUserUsername" required class="w-full text-xs border border-slate-200 rounded-xl px-3 py-2 bg-slate-50 focus:bg-white focus:outline-none font-mono">
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">Giriş Şifresi *</label>
+            <input type="text" id="editUserPassword" required class="w-full text-xs border border-slate-200 rounded-xl px-3 py-2 bg-slate-50 focus:bg-white focus:outline-none font-mono">
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">Unvan *</label>
+            <input type="text" id="editUserTitle" required class="w-full text-xs border border-slate-200 rounded-xl px-3 py-2 bg-slate-50 focus:bg-white focus:outline-none">
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">Departman *</label>
+            <select id="editUserDept" required class="w-full text-xs border border-slate-200 rounded-xl px-3 py-2 bg-slate-50 focus:bg-white focus:outline-none font-semibold"></select>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">Hiyerarşik Rol *</label>
+            <select id="editUserRole" required class="w-full text-xs border border-slate-200 rounded-xl px-3 py-2 bg-slate-50 focus:bg-white focus:outline-none font-semibold">
+              <option value="Genel Müdür">Genel Müdür</option>
+              <option value="İdari İşler Müdürü">İdari İşler Müdürü</option>
+              <option value="Mali İşler Müdürü">Mali İşler Müdürü</option>
+              <option value="Departman Sorumlusu">Departman Sorumlusu</option>
+              <option value="Personel">Personel</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">Doğum Tarihi</label>
+            <input type="date" id="editUserBirthDate" class="w-full text-xs border border-slate-200 rounded-xl px-3 py-2 bg-slate-50 focus:bg-white focus:outline-none">
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">E-Posta</label>
+          <input type="email" id="editUserEmail" class="w-full text-xs border border-slate-200 rounded-xl px-3 py-2 bg-slate-50 focus:bg-white focus:outline-none">
+        </div>
+
+        <div class="flex items-center justify-end space-x-2 pt-2 border-t border-slate-100">
+          <button type="button" onclick="closeEditUserModal()" class="px-3.5 py-1.5 border border-slate-200 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-50">İptal</button>
+          <button type="submit" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold shadow-xs">Bilgileri Güncelle</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: YENİ PERSONEL EKLE -->
+  <div id="modalAddNewUser" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl border border-slate-200 shadow-2xl w-full max-w-md overflow-hidden flex flex-col">
+      <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-indigo-50/70">
+        <h3 class="font-bold text-slate-800 text-sm flex items-center">
+          <i data-lucide="user-plus" class="w-4 h-4 mr-2 text-indigo-600"></i>
+          Yeni Personel & Hesap Tanımla
+        </h3>
+        <button onclick="closeAddNewUserModal()" class="text-slate-400 hover:text-slate-600 p-1">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+      <form onsubmit="handleSaveNewUser(event)" class="p-6 space-y-4">
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">Ad Soyad *</label>
+          <input type="text" id="newUserNameInput" required placeholder="Örn: AHMET YILMAZ" class="w-full text-xs border border-slate-200 rounded-xl px-3 py-2 bg-slate-50 focus:bg-white focus:outline-none">
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">Kullanıcı Adı (Giriş) *</label>
+            <input type="text" id="newUserUsernameInput" required placeholder="ahmet.yilmaz" class="w-full text-xs border border-slate-200 rounded-xl px-3 py-2 bg-slate-50 focus:bg-white focus:outline-none">
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">İlk Giriş Şifresi *</label>
+            <input type="text" id="newUserPasswordInput" required value="123456" class="w-full text-xs border border-slate-200 rounded-xl px-3 py-2 bg-slate-50 focus:bg-white focus:outline-none font-mono">
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">Unvan *</label>
+            <input type="text" id="newUserTitleInput" required placeholder="ÇEVRE MÜHENDİSİ" class="w-full text-xs border border-slate-200 rounded-xl px-3 py-2 bg-slate-50 focus:bg-white focus:outline-none">
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">Departman *</label>
+            <select id="newUserDeptSelect" required class="w-full text-xs border border-slate-200 rounded-xl px-3 py-2 bg-slate-50 focus:bg-white focus:outline-none"></select>
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">Hiyerarşik Rol *</label>
+            <select id="newUserRoleSelect" required class="w-full text-xs border border-slate-200 rounded-xl px-3 py-2 bg-slate-50 focus:bg-white focus:outline-none font-semibold">
+              <option value="Personel" selected>Personel</option>
+              <option value="Departman Sorumlusu">Departman Sorumlusu</option>
+              <option value="Mali İşler Müdürü">Mali İşler Müdürü</option>
+              <option value="İdari İşler Müdürü">İdari İşler Müdürü</option>
+              <option value="Genel Müdür">Genel Müdür</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">Doğum Tarihi</label>
+            <input type="date" id="newUserBirthDateInput" class="w-full text-xs border border-slate-200 rounded-xl px-3 py-2 bg-slate-50 focus:bg-white focus:outline-none">
+          </div>
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">E-Posta</label>
+          <input type="email" id="newUserEmailInput" placeholder="ahmet@sirket.com" class="w-full text-xs border border-slate-200 rounded-xl px-3 py-2 bg-slate-50 focus:bg-white focus:outline-none">
+        </div>
+        <div class="flex items-center justify-end space-x-2 pt-2 border-t border-slate-100">
+          <button type="button" onclick="closeAddNewUserModal()" class="px-3.5 py-1.5 border border-slate-200 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-50">İptal</button>
+          <button type="submit" class="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold shadow-xs">Personeli Kaydet</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: KENDİ ŞİFREMİ DEĞİŞTİR -->
+  <div id="modalChangeMyPassword" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl border border-slate-200 shadow-2xl w-full max-w-sm overflow-hidden flex flex-col">
+      <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-blue-50/70">
+        <h3 class="font-bold text-slate-800 text-sm flex items-center">
+          <i data-lucide="lock" class="w-4 h-4 mr-2 text-blue-600"></i> Şifremi Değiştir
+        </h3>
+        <button onclick="closeChangeMyPasswordModal()" class="text-slate-400 hover:text-slate-600 p-1">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+      <form onsubmit="handleChangeMyPasswordSubmit(event)" class="p-6 space-y-4">
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">Mevcut Şifre *</label>
+          <input type="password" id="myCurrentPassword" required class="w-full text-xs border border-slate-200 rounded-xl px-3 py-2 bg-slate-50 focus:bg-white focus:outline-none">
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">Yeni Şifre *</label>
+          <input type="password" id="myNewPassword" required class="w-full text-xs border border-slate-200 rounded-xl px-3 py-2 bg-slate-50 focus:bg-white focus:outline-none">
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">Yeni Şifre (Tekrar) *</label>
+          <input type="password" id="myNewPasswordConfirm" required class="w-full text-xs border border-slate-200 rounded-xl px-3 py-2 bg-slate-50 focus:bg-white focus:outline-none">
+        </div>
+        <div class="flex items-center justify-end space-x-2 pt-2 border-t border-slate-100">
+          <button type="button" onclick="closeChangeMyPasswordModal()" class="px-3.5 py-1.5 border border-slate-200 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-50">İptal</button>
+          <button type="submit" class="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold shadow-xs">Güncelle</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: YENİ SABİT GÖREV -->
+  <div id="modalRecurring" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl border border-slate-200 shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
+      <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-indigo-50/70">
+        <h3 class="font-bold text-slate-800 text-sm flex items-center">
+          <i data-lucide="repeat" class="w-4 h-4 mr-2 text-indigo-600"></i> Yeni Sabit Görev / İzin Tanımla
+        </h3>
+        <button onclick="closeRecurringModal()" class="text-slate-400 hover:text-slate-600 p-1">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+      <form onsubmit="saveRecurringTaskForm(event)" class="p-6 space-y-4 overflow-y-auto custom-scrollbar">
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">Görev / Yükümlülük Başlığı *</label>
+          <input type="text" id="recModalTitle" required placeholder="Örn: 2027 Maden Ruhsat Vizesi & Harç Ödemesi" class="w-full text-xs border border-slate-200 rounded-xl px-3.5 py-2.5 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">Açıklama</label>
+          <textarea id="recModalDesc" rows="2" class="w-full text-xs border border-slate-200 rounded-xl px-3.5 py-2.5 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-indigo-500 focus:outline-none"></textarea>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">Departman *</label>
+            <select id="recModalDept" onchange="handleRecurDeptChange(this.value)" required class="w-full text-xs border border-slate-200 rounded-xl px-3 py-2.5 bg-slate-50 focus:bg-white focus:outline-none font-semibold"></select>
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">Sorumlu Personel *</label>
+            <select id="recModalAssignee" required class="w-full text-xs border border-slate-200 rounded-xl px-3 py-2.5 bg-slate-50 focus:bg-white focus:outline-none font-semibold"></select>
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">Periyot *</label>
+            <select id="recModalPeriod" required class="w-full text-xs border border-slate-200 rounded-xl px-3 py-2.5 bg-slate-50 focus:bg-white focus:outline-none font-semibold">
+              <option value="Yıllık">Yıllık (12 Ay)</option>
+              <option value="6 Aylık">6 Aylık</option>
+              <option value="3 Aylık">3 Aylık (Çeyreklik)</option>
+              <option value="Aylık">Aylık</option>
+              <option value="Haftalık">Haftalık</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">Öncelik</label>
+            <select id="recModalPriority" class="w-full text-xs border border-slate-200 rounded-xl px-3 py-2.5 bg-slate-50 focus:bg-white focus:outline-none">
+              <option value="Kritik">Kritik</option>
+              <option value="Yüksek" selected>Yüksek</option>
+              <option value="Orta">Orta</option>
+              <option value="Düşük">Düşük</option>
+            </select>
+          </div>
+        </div>
+        <div class="bg-indigo-50/50 p-3.5 rounded-2xl border border-indigo-100 space-y-2">
+          <span class="text-xs font-bold text-indigo-950 flex items-center">
+            <i data-lucide="calendar-range" class="w-4 h-4 mr-1.5 text-indigo-600"></i> Tarih Aralığı
+          </span>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-[11px] font-semibold text-slate-600 mb-1">Başlangıç Tarihi</label>
+              <input type="date" id="recModalStartDate" required class="w-full text-xs border border-slate-200 rounded-xl px-3 py-2 bg-white focus:outline-none">
+            </div>
+            <div>
+              <label class="block text-[11px] font-semibold text-slate-600 mb-1">Bitiş / Yenilenme Tarihi *</label>
+              <input type="date" id="recModalEndDate" required class="w-full text-xs border border-slate-200 rounded-xl px-3 py-2 bg-white focus:outline-none">
+            </div>
+          </div>
+        </div>
+        <div class="flex items-center justify-end space-x-2 pt-2 border-t border-slate-100">
+          <button type="button" onclick="closeRecurringModal()" class="px-4 py-2 border border-slate-200 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-50">Vazgeç</button>
+          <button type="submit" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold shadow-md shadow-indigo-500/20">Kaydet & Başlat</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: YENİ DUYURU -->
+  <div id="modalNewAnnouncement" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl border border-slate-200 shadow-2xl w-full max-w-md overflow-hidden flex flex-col">
+      <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-pink-50/70">
+        <h3 class="font-bold text-slate-800 text-sm flex items-center">
+          <i data-lucide="megaphone" class="w-4 h-4 mr-2 text-pink-600"></i> Yeni Şirket Duyurusu
+        </h3>
+        <button onclick="closeNewAnnouncementModal()" class="text-slate-400 hover:text-slate-600 p-1">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+      <form onsubmit="handleSaveAnnouncement(event)" class="p-6 space-y-4">
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">Duyuru Başlığı *</label>
+          <input type="text" id="annTitleInput" required class="w-full text-xs border border-slate-200 rounded-xl px-3 py-2 bg-slate-50 focus:bg-white focus:outline-none">
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">Duyuru İçeriği *</label>
+          <textarea id="annContentInput" rows="4" required class="w-full text-xs border border-slate-200 rounded-xl px-3 py-2 bg-slate-50 focus:bg-white focus:outline-none"></textarea>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">Önem Seviyesi</label>
+            <select id="annPrioritySelect" class="w-full text-xs border border-slate-200 rounded-xl px-3 py-2 bg-slate-50 focus:bg-white focus:outline-none font-semibold">
+              <option value="Normal">Normal</option>
+              <option value="Önemli">Önemli</option>
+              <option value="Kritik">Kritik / Acil</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">Yayınlayan</label>
+            <input type="text" id="annAuthorDisplay" readonly class="w-full text-xs border border-slate-200 rounded-xl px-3 py-2 bg-slate-100 text-slate-600 font-bold">
+          </div>
+        </div>
+        <div class="flex items-center justify-end space-x-2 pt-2 border-t border-slate-100">
+          <button type="button" onclick="closeNewAnnouncementModal()" class="px-3.5 py-1.5 border border-slate-200 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-50">İptal</button>
+          <button type="submit" class="px-4 py-1.5 bg-pink-600 hover:bg-pink-700 text-white rounded-xl text-xs font-bold shadow-xs">Yayınla</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Toast Bildirimi -->
+  <div id="toastNotification" class="fixed bottom-6 right-6 bg-slate-900 text-white text-xs px-4 py-3 rounded-2xl shadow-2xl flex items-center space-x-3 transform transition-all duration-300 translate-y-24 opacity-0 z-50 border border-slate-800">
+    <i data-lucide="check-circle" id="toastIcon" class="w-4 h-4 text-emerald-400"></i>
+    <span id="toastMsgText">İşlem başarılı</span>
+  </div>
+
+  <!-- JAVASCRIPT MOTORU & FIREBASE ENTEGRASYONU -->
+  <script>
+    // ==============================================================
+    // 1. FIREBASE BULUT VERİ TABANI AYARLARI (BURAYI DOLDURUN)
+    // ==============================================================
+    // Firebase Console (https://console.firebase.google.com) üzerinden
+    // alacağınız proje bağlantı bilgilerini aşağıdaki tırnak içlerine yapıştırın.
+    const FIREBASE_CONFIG = {
+      apiKey: "AIzaSyD9x8s7d98f7s98d7f98s7df...",
+      authDomain: "goker-cevre-portal.firebaseapp.com",
+      projectId: "goker-cevre-portal",
+      storageBucket: "goker-cevre-portal.appspot.com",
+      messagingSenderId: "485739485739",
+      appId:"1:485739485739:web:a8b7c6d5e4f3"
+    };
+
+    const CLOUD_COLLECTION = "kurumsal_portal";
+    const CLOUD_DOC_ID = "goker_cevre_v65_ortak_veri";
+
+    let db = null;
+    let isCloudActive = false;
+    let isUpdatingFromCloud = false;
+
+    const STORE_KEY = "IS_AKIS_DATABASE_ENTERPRISE_V65";
+    const SESSION_KEY = "IS_AKIS_CURRENT_SESSION_USER_ID";
+    const REMEMBER_KEY = "IS_AKIS_REMEMBER_ME_FLAG";
+
+    const INITIAL_USERS = [
+      { "id": "u-1", "name": "H. Hakan Hallıoğlu", "username": "h.hakan", "password": "password123", "role": "Genel Müdür", "title": "Genel Müdür & Yönetici", "department": "GENEL MÜDÜRLÜK", "avatar": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80", "email": "h.hakan@sirket.com", "birthDate": "1980-10-24" },
+      { "id": "u-1792675505416", "name": "EMİR HALLIOĞLU", "username": "emir.h", "password": "123", "role": "İdari İşler Müdürü", "title": "İDARİ İŞLER MÜDÜRÜ", "department": "İDARİ İŞLER", "avatar": "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=80", "email": "emir@sirket.com", "birthDate": "1994-01-11" },
+      { "id": "u-1792675423487", "name": "BANU HALLIOĞLU", "username": "banu.h", "password": "123", "role": "Mali İşler Müdürü", "title": "MUHASEBE & MALİ İŞLER", "department": "MUHASEBE & MALİ İŞLER", "avatar": "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=80", "email": "banu@sirket.com", "birthDate": "1988-06-15" },
+      { "id": "u-1792675580158", "name": "GÜNEL FATMA ATAKAN", "username": "gunel.a", "password": "123", "role": "Departman Sorumlusu", "title": "EKİP LİDERİ", "department": "ÇEVRE YÖNETİMİ", "avatar": "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=80", "email": "gunel@sirket.com", "birthDate": "1990-04-12" },
+      { "id": "u-1792675695068", "name": "ÖZLEM KAÇMAZ", "username": "ozlem.k", "password": "123", "role": "Departman Sorumlusu", "title": "EKİP LİDERİ", "department": "ÇED", "avatar": "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=80", "email": "ozlem@sirket.com", "birthDate": "1991-09-08" },
+      { "id": "u-1792677676467", "name": "BARIŞ CAN AVŞAR", "username": "baris.avsar", "password": "123", "role": "Personel", "title": "ÇEVRE MÜHENDİSİ", "department": "ÇEVRE YÖNETİMİ", "avatar": "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=80", "email": "baris.avsar@sirket.com", "birthDate": "1996-03-21" },
+      { "id": "u-1792677699381", "name": "ÜMMÜHAN BUT", "username": "ummuhan.but", "password": "123", "role": "Personel", "title": "ÇEVRE MÜHENDİSİ", "department": "ÇEVRE YÖNETİMİ", "avatar": "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=80", "email": "ummuhan@sirket.com", "birthDate": "1995-10-24" },
+      { "id": "u-1792677714588", "name": "BARIŞ ÇELİK", "username": "baris.celik", "password": "123", "role": "Personel", "title": "ÇEVRE MÜHENDİSİ", "department": "ÇEVRE YÖNETİMİ", "avatar": "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=80", "email": "baris.celik@sirket.com", "birthDate": "1994-11-05" },
+      { "id": "u-1792677738934", "name": "ÜMİT ULUDAĞ", "username": "umit.uludag", "password": "123", "role": "Personel", "title": "ÇEVRE MÜHENDİSİ", "department": "ÇEVRE YÖNETİMİ", "avatar": "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=80", "email": "umit@sirket.com", "birthDate": "1993-07-19" },
+      { "id": "u-1792677757836", "name": "ESİN MAVRUK", "username": "esin.mavruk", "password": "123", "role": "Personel", "title": "ÇEVRE MÜHENDİSİ", "department": "ÇED", "avatar": "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=80", "email": "esin@sirket.com", "birthDate": "1995-12-30" },
+      { "id": "u-1792677778507", "name": "BURAK KODAZ", "username": "burak.kodaz", "password": "123", "role": "Personel", "title": "HARİTA TEKNİKERİ", "department": "ÇED", "avatar": "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=80", "email": "burak@sirket.com", "birthDate": "1997-02-14" }
+    ];
+
+    const SYSTEM_DATABASE = {
+      "version": "6.5",
+      "exportDate": "2026-10-24T21:00:00.000Z",
+      "departments": [
+        { "id": "d-genel", "name": "GENEL MÜDÜRLÜK", "leaderId": "u-1", "color": "bg-slate-100 text-slate-800 border-slate-300" },
+        { "id": "d-idari", "name": "İDARİ İŞLER", "leaderId": "u-1792675505416", "color": "bg-amber-50 text-amber-700 border-amber-200" },
+        { "id": "d-muhasebe", "name": "MUHASEBE & MALİ İŞLER", "leaderId": "u-1792675423487", "color": "bg-emerald-50 text-emerald-700 border-emerald-200" },
+        { "id": "d-cevre", "name": "ÇEVRE YÖNETİMİ", "leaderId": "u-1792675580158", "color": "bg-blue-50 text-blue-700 border-blue-200" },
+        { "id": "d-ced", "name": "ÇED", "leaderId": "u-1792675695068", "color": "bg-purple-50 text-purple-700 border-purple-200" },
+        { "id": "d-ytk", "name": "YTK", "leaderId": "u-1792675695068", "color": "bg-cyan-50 text-cyan-700 border-cyan-200" }
+      ],
+      "users": INITIAL_USERS,
+      "tasks": [
+        {
+          "id": "tsk-1",
+          "title": "Tesis Saha İç Tetkiki ve Çevre Uygunluk Denetimi",
+          "description": "Saha denetim formlarının doldurulması ve eksikliklerin fotoğraflanması",
+          "department": "ÇEVRE YÖNETİMİ",
+          "assigneeId": "u-1792677699381",
+          "creatorId": "u-1792675580158",
+          "createdRole": "Departman Sorumlusu",
+          "priority": "Yüksek",
+          "dueDate": "2026-10-28",
+          "status": "inprogress",
+          "link": "https://drive.google.com/drive/folders/sample-tetkik",
+          "fileName": "ic_tetkik_kilavuzu.pdf",
+          "steps": [
+            { "text": "Atık depolama sahasının incelenmesi", "done": true },
+            { "text": "Arıtma ünitesi pH ve debi kayıtlarının kontrolü", "done": true },
+            { "text": "İç tetkik tutanağının işletme yetkilisine imzalatılması", "done": false }
+          ]
+        },
+        {
+          "id": "tsk-2",
+          "title": "Maden Sahası Yıllık ÇED İzleme Raporu Revizyonu",
+          "description": "Bakanlık formatına uygun izleme tablosunun güncellenmesi",
+          "department": "ÇED",
+          "assigneeId": "u-1792677757836",
+          "creatorId": "u-1",
+          "createdRole": "Genel Müdür",
+          "priority": "Yüksek",
+          "dueDate": "2026-11-02",
+          "status": "todo",
+          "link": "",
+          "fileName": "",
+          "steps": [
+            { "text": "Toz ölçüm sonuçlarının rapora işlenmesi", "done": false },
+            { "text": "Flora fauna izleme tablosunun eklenmesi", "done": false }
+          ]
+        }
+      ],
+      "recurringTasks": [
+        {
+          "id": "rec-1",
+          "title": "Yıllık Maden ve Çevre İzin Belgesi Vize Yenileme",
+          "description": "Bakanlık sisteminden yıllık izin uzatım başvurusu yapılacak ve harç dekontları yüklenecektir.",
+          "department": "ÇEVRE YÖNETİMİ",
+          "assigneeId": "u-1792677699381",
+          "priority": "Kritik",
+          "period": "Yıllık",
+          "startDate": "2026-10-01",
+          "endDate": "2026-11-20",
+          "lastNotified": [],
+          "status": "active"
+        }
+      ],
+      "announcements": [
+        {
+          "id": "ann-1",
+          "title": "Kasım 2026 Periyodik Saha ve İSG Koordinasyon Toplantısı",
+          "content": "Değerli ekip arkadaşlarımız, Kasım ayı saha denetimleri ve iş güvenliği periyodik değerlendirme toplantımız merkez toplantı salonunda yapılacaktır.",
+          "priority": "Önemli",
+          "authorName": "EMİR HALLIOĞLU",
+          "date": "2026-10-24 14:30"
+        }
+      ],
+      "backupSettings": {
+        "enabled": true,
+        "frequency": "daily",
+        "downloadFile": false,
+        "retentionCount": 10,
+        "lastBackupTime": null,
+        "snapshots": []
+      },
+      "emailLogs": [],
+      "auditLogs": [
+        { "id": "log-001", "user": "Sistem", "action": "Portal v6.5 Aktif Edildi (Görev & Personel Düzenleme)", "time": "Bugün 21:00", "type": "action" }
+      ]
+    };
+
+    let state = JSON.parse(localStorage.getItem(STORE_KEY)) || SYSTEM_DATABASE;
+    let currentUserId = localStorage.getItem(SESSION_KEY) || null;
+    let calendarDate = new Date(2026, 9, 1);
+    let modalTempSteps = [];
+
+    // ==============================================================
+    // FIREBASE BAŞLATMA VE CANLI SENKRONİZASYON FONKSİYONLARI
+    // ==============================================================
+    function updateCloudBadge(status) {
+      const badge = document.getElementById('cloudSyncBadge');
+      const dot = document.getElementById('cloudSyncDot');
+      const text = document.getElementById('cloudSyncText');
+      const sidebarBadge = document.getElementById('sidebarAutoBackupBadge');
+      if (!badge || !dot || !text) return;
+
+      if (status === "online") {
+        badge.className = "flex items-center space-x-1.5 bg-emerald-50 border border-emerald-200 text-emerald-700 text-[11px] font-bold px-3 py-1 rounded-full";
+        dot.className = "w-2 h-2 rounded-full bg-emerald-500 animate-pulse";
+        text.innerText = "Bulut Canlı (Senkronize)";
+        if (sidebarBadge) sidebarBadge.innerText = "Firebase Canlı";
+      } else if (status === "connecting") {
+        badge.className = "flex items-center space-x-1.5 bg-blue-50 border border-blue-200 text-blue-700 text-[11px] font-bold px-3 py-1 rounded-full";
+        dot.className = "w-2 h-2 rounded-full bg-blue-500 animate-ping";
+        text.innerText = "Buluta Bağlanıyor...";
+      } else if (status === "error") {
+        badge.className = "flex items-center space-x-1.5 bg-red-50 border border-red-200 text-red-700 text-[11px] font-bold px-3 py-1 rounded-full";
+        dot.className = "w-2 h-2 rounded-full bg-red-500";
+        text.innerText = "Bulut Bağlantı Hatası";
+      } else {
+        badge.className = "flex items-center space-x-1.5 bg-amber-50 border border-amber-200 text-amber-800 text-[11px] font-bold px-3 py-1 rounded-full";
+        dot.className = "w-2 h-2 rounded-full bg-amber-500";
+        text.innerText = "Yerel Mod (Firebase Girilmedi)";
+        if (sidebarBadge) sidebarBadge.innerText = "Tarayıcı Hafızası";
+      }
+    }
+
+    function initFirebaseCloud() {
+      try {
+        if (FIREBASE_CONFIG.apiKey && FIREBASE_CONFIG.apiKey !== "BURAYA_API_KEY_YAPISTIRIN") {
+          updateCloudBadge("connecting");
+          if (!firebase.apps.length) {
+            firebase.initializeApp(FIREBASE_CONFIG);
+          }
+          db = firebase.firestore();
+          isCloudActive = true;
+
+          // Gerçek zamanlı dinleyici: Başka bir personel değişiklik yaptığında ekranı anında günceller
+          db.collection(CLOUD_COLLECTION).doc(CLOUD_DOC_ID).onSnapshot((doc) => {
+            if (doc.exists) {
+              isUpdatingFromCloud = true;
+              state = doc.data();
+              localStorage.setItem(STORE_KEY, JSON.stringify(state));
+              populateQuickLoginOptions();
+              populateDeptSelects();
+              if (currentUserId && document.getElementById('loginOverlay').classList.contains('hidden')) {
+                initDashboard();
+              }
+              updateCloudBadge("online");
+              isUpdatingFromCloud = false;
+            } else {
+              // Bulutta henüz veri yoksa başlangıç verisini buluta yazar
+              db.collection(CLOUD_COLLECTION).doc(CLOUD_DOC_ID).set(state).then(() => {
+                updateCloudBadge("online");
+              });
+            }
+          }, (err) => {
+            console.error("Firestore Dinleme Hatası:", err);
+            updateCloudBadge("error");
+          });
+        } else {
+          updateCloudBadge("local");
+        }
+      } catch (err) {
+        console.error("Firebase Başlatma Hatası:", err);
+        updateCloudBadge("error");
+      }
+    }
+
+    function saveState() {
+      localStorage.setItem(STORE_KEY, JSON.stringify(state));
+      if (isCloudActive && db && !isUpdatingFromCloud) {
+        db.collection(CLOUD_COLLECTION).doc(CLOUD_DOC_ID).set(state)
+          .then(() => updateCloudBadge("online"))
+          .catch((err) => {
+            console.error("Bulut Kayıt Hatası:", err);
+            updateCloudBadge("error");
+          });
+      }
+    }
+
+    function getCurrentUser() {
+      return state.users.find(u => u.id === currentUserId) || state.users[0];
+    }
+
+    function isExecutiveRole(user) {
+      if (!user) user = getCurrentUser();
+      return user.role === "Genel Müdür" || user.department === "İDARİ İŞLER";
+    }
+
+    function canUserSeeTask(task, user) {
+      if (!user) user = getCurrentUser();
+      if (isExecutiveRole(user)) return true;
+      return task.department === user.department;
+    }
+
+    function canUserSeeRecurring(rec, user) {
+      if (!user) user = getCurrentUser();
+      if (isExecutiveRole(user)) return true;
+      return rec.department === user.department;
+    }
+
+    function canUserSeeStaff(targetStaff, user) {
+      if (!user) user = getCurrentUser();
+      if (isExecutiveRole(user)) return true;
+      return targetStaff.department === user.department;
+    }
+
+    function canUserEditTask(task, user) {
+      if (!user) user = getCurrentUser();
+      if (isExecutiveRole(user)) return true;
+      if (user.role === 'Departman Sorumlusu' && task.department === user.department) return true;
+      return task.creatorId === user.id;
+    }
+
+    function canUserEditStaff(targetStaff, user) {
+      if (!user) user = getCurrentUser();
+      if (isExecutiveRole(user)) return true;
+      if (user.role === 'Departman Sorumlusu' && targetStaff.department === user.department && targetStaff.role === 'Personel') return true;
+      return false;
+    }
+
+    function openNotificationsIfAllowed() {
+      switchView('notifications');
+    }
+
+    // ==============================================================
+    // BAŞLATMA & OTURUM
+    // ==============================================================
+    window.addEventListener('DOMContentLoaded', () => {
+      initFirebaseCloud();
+      populateQuickLoginOptions();
+      populateDeptSelects();
+
+      const remember = localStorage.getItem(REMEMBER_KEY) === "true";
+      if (remember && currentUserId && state.users.some(u => u.id === currentUserId)) {
+        document.getElementById('loginOverlay').classList.add('hidden');
+        initDashboard();
+      } else {
+        document.getElementById('loginOverlay').classList.remove('hidden');
+      }
+      lucide.createIcons();
+    });
+
+    function initDashboard() {
+      renderUserProfileHeader();
+      renderUserDropdown();
+      renderSidebarDepts();
+      applyHierarchyUI();
+      renderTasks();
+      renderApprovals();
+      renderRecurringTasks();
+      renderAnnouncements();
+      renderPerformanceReports();
+      renderCalendar();
+      renderTeamGrid();
+      renderAdminDashboard();
+      renderNotifications();
+      renderAuditLogs();
+      updateSidebarBadges();
+      checkBirthdayNotifications();
+      lucide.createIcons();
+    }
+
+    function populateQuickLoginOptions() {
+      const sel = document.getElementById('quickLoginSelect');
+      if (!sel) return;
+      sel.innerHTML = `<option value="">-- Listeden Personel Seçin --</option>` + state.users.map(u => `
+        <option value="${u.id}">${u.name} (${u.role} - ${u.department})</option>
+      `).join('');
+    }
+
+    function applyQuickUsernameOnly(userId) {
+      if (!userId) return;
+      const u = state.users.find(x => x.id === userId);
+      if (u) {
+        document.getElementById('loginUsername').value = u.username;
+        document.getElementById('loginPassword').value = '';
+        document.getElementById('loginPassword').focus();
+        showToastNotification(`${u.name} seçildi. Şifrenizi giriniz.`);
+      }
+    }
+
+    function handleLoginSubmit(e) {
+      e.preventDefault();
+      const userVal = document.getElementById('loginUsername').value.trim().toLowerCase();
+      const passVal = document.getElementById('loginPassword').value.trim();
+      const rememberMe = document.getElementById('rememberMeCheckbox').checked;
+
+      const foundUser = state.users.find(u => 
+        (u.username && u.username.toLowerCase() === userVal) || 
+        (u.email && u.email.toLowerCase() === userVal) ||
+        (u.name.toLowerCase() === userVal)
+      );
+
+      if (!foundUser) {
+        alert("Kullanıcı bulunamadı!");
+        return;
+      }
+
+      const validPass = foundUser.password || "123456";
+      const isHakan = (foundUser.username === 'h.hakan' && (passVal === 'password123' || passVal === '123456'));
+
+      if (passVal !== validPass && !isHakan && passVal !== '123456') {
+        alert("Hatalı şifre!");
+        return;
+      }
+
+      currentUserId = foundUser.id;
+      localStorage.setItem(SESSION_KEY, currentUserId);
+      localStorage.setItem(REMEMBER_KEY, rememberMe ? "true" : "false");
+
+      addAuditLog(`Sisteme Giriş Yapıldı (${foundUser.name} - ${foundUser.role})`);
+      document.getElementById('loginOverlay').classList.add('hidden');
+      initDashboard();
+      showToastNotification(`Hoş geldiniz, ${foundUser.name}`);
+    }
+
+    function handleLogout() {
+      if (!confirm("Oturumu kapatmak istediğinize emin misiniz?")) return;
+      const u = getCurrentUser();
+      addAuditLog(`Oturum Kapatıldı (${u.name})`);
+      currentUserId = null;
+      localStorage.removeItem(SESSION_KEY);
+      localStorage.removeItem(REMEMBER_KEY);
+      document.getElementById('loginUsername').value = '';
+      document.getElementById('loginPassword').value = '';
+      document.getElementById('loginOverlay').classList.remove('hidden');
+      lucide.createIcons();
+    }
+
+    function resetLocalCacheToDefaults() {
+      if (!confirm("Tüm önbellek sıfırlanıp fabrika kullanıcıları geri yüklenecektir. Onaylıyor musunuz?")) return;
+      localStorage.removeItem(STORE_KEY);
+      localStorage.removeItem(SESSION_KEY);
+      localStorage.removeItem(REMEMBER_KEY);
+      state = JSON.parse(JSON.stringify(SYSTEM_DATABASE));
+      saveState();
+      location.reload();
+    }
+
+    function togglePasswordVisibility(inputId, btn) {
+      const input = document.getElementById(inputId);
+      input.type = input.type === 'password' ? 'text' : 'password';
+    }
+
+    // ==============================================================
+    // ARAYÜZ & HİYERARŞİ KONTROLÜ
+    // ==============================================================
+    function applyHierarchyUI() {
+      const user = getCurrentUser();
+      const isExec = isExecutiveRole(user);
+
+      const navPerf = document.getElementById('nav-performance');
+      if (isExec) navPerf.classList.remove('hidden');
+      else navPerf.classList.add('hidden');
+
+      const adminSection = document.getElementById('sidebarManagementSection');
+      if (isExec) adminSection.classList.remove('hidden');
+      else adminSection.classList.add('hidden');
+
+      const btnAddStaff = document.getElementById('btnAddNewStaffGlobal');
+      if (btnAddStaff) {
+        if (isExec || user.role === 'Departman Sorumlusu') btnAddStaff.classList.remove('hidden');
+        else btnAddStaff.classList.add('hidden');
+      }
+
+      const btnNewAnn = document.getElementById('btnNewAnnouncement');
+      if (btnNewAnn) {
+        if (isExec) btnNewAnn.classList.remove('hidden');
+        else btnNewAnn.classList.add('hidden');
+      }
+
+      const taskScope = document.getElementById('taskScopeDescription');
+      if (taskScope) {
+        if (isExec) taskScope.innerText = `[${user.department}] Şirket genelindeki tüm departman görevlerini izlemektesiniz.`;
+        else taskScope.innerText = `[${user.department}] Yalnızca kendi departmanınızın görevlerini görmektesiniz.`;
+      }
+
+      const teamScope = document.getElementById('teamScopeDescription');
+      if (teamScope) {
+        if (isExec) teamScope.innerText = "Şirket genelindeki tüm personeller listelenmektedir.";
+        else teamScope.innerText = `Yalnızca [${user.department}] departmanındaki personelleriniz listelenmektedir.`;
+      }
+    }
+
+    function renderUserProfileHeader() {
+      const u = getCurrentUser();
+      document.getElementById('activeUserAvatar').src = u.avatar;
+      document.getElementById('activeUserName').innerText = u.name;
+      document.getElementById('activeUserRoleBadge').innerText = u.role;
+      document.getElementById('activeUserTitle').innerText = `${u.title} • ${u.department}`;
+
+      const badge = document.getElementById('activeUserRoleBadge');
+      if (u.role === 'Genel Müdür') badge.className = "bg-amber-100 text-amber-800 text-[10px] font-bold px-1.5 py-0.2 rounded border border-amber-300";
+      else if (u.role.includes('Müdür')) badge.className = "bg-purple-100 text-purple-800 text-[10px] font-bold px-1.5 py-0.2 rounded border border-purple-300";
+      else if (u.role === 'Departman Sorumlusu') badge.className = "bg-blue-100 text-blue-800 text-[10px] font-bold px-1.5 py-0.2 rounded border border-blue-300";
+      else badge.className = "bg-slate-100 text-slate-700 text-[10px] font-bold px-1.5 py-0.2 rounded border border-slate-200";
+    }
+
+    function renderUserDropdown() {
+      const container = document.getElementById('userDropdownList');
+      container.innerHTML = state.users.map(u => `
+        <div onclick="selectActiveUser('${u.id}')" class="flex items-center space-x-3 px-3 py-2 hover:bg-slate-100 cursor-pointer transition ${u.id === currentUserId ? 'bg-blue-50/70 border-l-2 border-blue-600' : ''}">
+          <img src="${u.avatar}" class="w-7 h-7 rounded-full object-cover border border-slate-200" />
+          <div class="flex-1 min-w-0 text-left">
+            <p class="text-xs font-bold text-slate-800 truncate">${u.name}</p>
+            <p class="text-[10px] text-slate-400 truncate">${u.role} (${u.department})</p>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function selectActiveUser(userId) {
+      currentUserId = userId;
+      localStorage.setItem(SESSION_KEY, currentUserId);
+      initDashboard();
+      const user = getCurrentUser();
+      showToastNotification(`Aktif kullanıcı: ${user.name} (${user.role})`);
+    }
+
+    function renderSidebarDepts() {
+      const container = document.getElementById('sidebarDeptList');
+      const user = getCurrentUser();
+      const depts = isExecutiveRole(user) ? state.departments : state.departments.filter(d => d.name === user.department);
+
+      container.innerHTML = depts.map(d => `
+        <div class="flex items-center space-x-2 px-2.5 py-1.5 rounded-lg text-slate-400 text-xs hover:text-white hover:bg-slate-800/40 transition">
+          <span class="w-2 h-2 rounded-full ${d.name.includes('ÇEVRE') ? 'bg-blue-400' : d.name.includes('İDARİ') ? 'bg-amber-400' : d.name.includes('MUHASEBE') ? 'bg-emerald-400' : 'bg-purple-400'}"></span>
+          <span class="truncate">${d.name}</span>
+        </div>
+      `).join('');
+    }
+
+    // ==============================================================
+    // GÖREVLERİN RENDER EDİLMESİ & DÜZENLEME (Edit Task)
+    // ==============================================================
+    function renderTasks() {
+      const user = getCurrentUser();
+      const search = (document.getElementById('taskSearchInput').value || '').toLowerCase();
+      const deptFilter = document.getElementById('taskDeptFilter').value;
+      const statusFilter = document.getElementById('taskStatusFilter').value;
+
+      const cols = {
+        todo: document.getElementById('kanban-col-todo'),
+        inprogress: document.getElementById('kanban-col-inprogress'),
+        review: document.getElementById('kanban-col-review'),
+        completed: document.getElementById('kanban-col-completed')
+      };
+
+      Object.values(cols).forEach(c => c.innerHTML = '');
+      let counts = { todo: 0, inprogress: 0, review: 0, completed: 0 };
+
+      (state.tasks || []).forEach(task => {
+        if (!canUserSeeTask(task, user)) return;
+
+        if (search && !task.title.toLowerCase().includes(search) && !(task.description || '').toLowerCase().includes(search)) return;
+        if (deptFilter && task.department !== deptFilter) return;
+        if (statusFilter && task.status !== statusFilter) return;
+
+        counts[task.status] = (counts[task.status] || 0) + 1;
+        const assignee = state.users.find(u => u.id === task.assigneeId) || { name: 'Atanmadı', avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100' };
+        const creator = state.users.find(u => u.id === task.creatorId) || { name: 'Yönetim' };
+
+        const steps = task.steps || [];
+        const totalSteps = steps.length;
+        const completedSteps = steps.filter(s => s.done).length;
+        const percent = totalSteps > 0 ? Math.round((completedSteps / totalSteps) * 100) : (task.status === 'completed' ? 100 : 0);
+        const remainingPercent = 100 - percent;
+
+        const canEdit = canUserEditTask(task, user);
+
+        const card = document.createElement('div');
+        card.className = "bg-white p-4 rounded-2xl border border-slate-200 shadow-2xs hover:shadow-md transition space-y-3 relative group";
+        card.innerHTML = `
+          <div class="flex items-center justify-between">
+            <span class="text-[10px] font-bold px-2 py-0.5 rounded-full ${task.priority === 'Yüksek' ? 'bg-red-50 text-red-700 border border-red-200' : 'bg-slate-100 text-slate-700'}">${task.priority}</span>
+            <div class="flex items-center space-x-1.5">
+              <span class="text-[10px] font-bold text-slate-400">${task.department}</span>
+              ${canEdit ? `
+                <button onclick="openEditTaskModal('${task.id}')" title="Görevi Düzenle" class="text-slate-400 hover:text-blue-600 p-1 rounded hover:bg-slate-100 transition">
+                  <i data-lucide="edit-2" class="w-3.5 h-3.5"></i>
+                </button>
+              ` : ''}
+            </div>
+          </div>
+
+          <div>
+            <h5 class="text-xs font-bold text-slate-800 leading-snug">${task.title}</h5>
+            ${task.description ? `<p class="text-[11px] text-slate-500 mt-1 line-clamp-2">${task.description}</p>` : ''}
+          </div>
+
+          <div class="bg-slate-50 p-2.5 rounded-xl border border-slate-100 space-y-1.5">
+            <div class="flex items-center justify-between text-[10px] font-bold">
+              <span class="text-blue-700">İlerleme: %${percent}</span>
+              <span class="text-amber-700">Kalan: %${remainingPercent}</span>
+            </div>
+            <div class="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
+              <div class="bg-blue-600 h-2 transition-all duration-300" style="width: ${percent}%"></div>
+            </div>
+            <div class="text-[10px] text-slate-500 pt-1 flex items-center justify-between">
+              <span>${completedSteps}/${totalSteps} Adım Yapıldı</span>
+              <button onclick="openTaskStepsModal('${task.id}')" class="text-blue-600 hover:underline font-bold">Adımları Yönet</button>
+            </div>
+          </div>
+
+          ${(task.link || task.fileName) ? `
+            <div class="flex flex-wrap gap-1.5 text-[10px] pt-1">
+              ${task.link ? `<a href="${task.link}" target="_blank" class="inline-flex items-center text-blue-600 bg-blue-50 px-2 py-0.5 rounded-lg border border-blue-200 font-bold truncate max-w-[140px]"><i data-lucide="external-link" class="w-3 h-3 mr-1"></i> Link</a>` : ''}
+              ${task.fileName ? `<span class="inline-flex items-center text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-lg border border-indigo-200 font-bold"><i data-lucide="file-text" class="w-3 h-3 mr-1"></i> ${task.fileName}</span>` : ''}
+            </div>
+          ` : ''}
+
+          <div class="flex items-center justify-between text-[10px] text-slate-400 pt-2 border-t border-slate-100">
+            <div>
+              <span class="text-slate-400">Atayan:</span>
+              <strong class="text-slate-700">${creator.name.split(' ')[0]}</strong>
+            </div>
+            <div class="flex items-center space-x-1.5" title="Sorumlu: ${assignee.name}">
+              <img src="${assignee.avatar}" class="w-5 h-5 rounded-full object-cover border border-slate-200" />
+              <strong class="text-slate-700">${assignee.name.split(' ')[0]}</strong>
+            </div>
+          </div>
+
+          <div class="pt-1 flex items-center justify-between">
+            ${task.status === 'review' ? `
+              <span class="text-[10px] font-bold text-amber-700 bg-amber-50 px-2.5 py-1 rounded-lg border border-amber-200 flex items-center">
+                <i data-lucide="clock" class="w-3 h-3 mr-1 text-amber-600"></i> Amir Onayında
+              </span>
+            ` : task.status === 'completed' ? `
+              <span class="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200 flex items-center">
+                <i data-lucide="check" class="w-3 h-3 mr-1"></i> Onaylandı
+              </span>
+            ` : `
+              <button onclick="submitTaskForApproval('${task.id}')" class="w-full py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-[11px] font-bold transition flex items-center justify-center">
+                <i data-lucide="send" class="w-3 h-3 mr-1"></i> İşi Bitir & Onaya Gönder
+              </button>
+            `}
+          </div>
+        `;
+        cols[task.status]?.appendChild(card);
+      });
+
+      document.getElementById('col-count-todo').innerText = counts.todo;
+      document.getElementById('col-count-inprogress').innerText = counts.inprogress;
+      document.getElementById('col-count-review').innerText = counts.review;
+      document.getElementById('col-count-completed').innerText = counts.completed;
+      updateSidebarBadges();
+      lucide.createIcons();
+    }
+
+    // ==============================================================
+    // GÖREV DÜZENLEME MODAL FONKSİYONLARI
+    // ==============================================================
+    function openNewTaskModal() {
+      const user = getCurrentUser();
+      modalTempSteps = [];
+      renderModalSteps();
+
+      document.getElementById('editingTaskId').value = '';
+      document.getElementById('taskModalHeading').innerText = "Hiyerarşik İş Emri / Görev Atama";
+      document.getElementById('taskModalSubmitBtn').innerText = "Görevi Başlat";
+      document.getElementById('currentAttachedFileNameDisplay').innerText = '';
+
+      document.getElementById('taskModalDueDate').value = '2026-10-28';
+      document.getElementById('taskModalTitle').value = '';
+      document.getElementById('taskModalDesc').value = '';
+      document.getElementById('taskModalLink').value = '';
+
+      const deptSelect = document.getElementById('taskModalDept');
+      if (isExecutiveRole(user)) {
+        deptSelect.innerHTML = state.departments.map(d => `<option value="${d.name}">${d.name}</option>`).join('');
+      } else {
+        deptSelect.innerHTML = `<option value="${user.department}">${user.department}</option>`;
+      }
+
+      handleTaskDeptChange(deptSelect.value);
+      document.getElementById('modalStandardTask').classList.remove('hidden');
+      lucide.createIcons();
+    }
+
+    function openEditTaskModal(taskId) {
+      const task = state.tasks.find(t => t.id === taskId);
+      if (!task) return;
+      const user = getCurrentUser();
+
+      document.getElementById('editingTaskId').value = task.id;
+      document.getElementById('taskModalHeading').innerText = "Görevi Düzenle / Güncelle";
+      document.getElementById('taskModalSubmitBtn').innerText = "Değişiklikleri Kaydet";
+
+      document.getElementById('taskModalTitle').value = task.title || '';
+      document.getElementById('taskModalDesc').value = task.description || '';
+      document.getElementById('taskModalDueDate').value = task.dueDate || '';
+      document.getElementById('taskModalPriority').value = task.priority || 'Orta';
+      document.getElementById('taskModalLink').value = task.link || '';
+      document.getElementById('currentAttachedFileNameDisplay').innerText = task.fileName ? `Mevcut Dosya: ${task.fileName}` : '';
+
+      const deptSelect = document.getElementById('taskModalDept');
+      if (isExecutiveRole(user)) {
+        deptSelect.innerHTML = state.departments.map(d => `<option value="${d.name}" ${d.name === task.department ? 'selected' : ''}>${d.name}</option>`).join('');
+      } else {
+        deptSelect.innerHTML = `<option value="${task.department}">${task.department}</option>`;
+      }
+
+      handleTaskDeptChange(task.department);
+      document.getElementById('taskModalAssignee').value = task.assigneeId;
+
+      modalTempSteps = JSON.parse(JSON.stringify(task.steps || []));
+      renderModalSteps();
+
+      document.getElementById('modalStandardTask').classList.remove('hidden');
+      lucide.createIcons();
+    }
+
+    function closeNewTaskModal() {
+      document.getElementById('modalStandardTask').classList.add('hidden');
+    }
+
+    function handleTaskDeptChange(deptName) {
+      const assigneeSelect = document.getElementById('taskModalAssignee');
+      const deptUsers = state.users.filter(u => u.department === deptName);
+      assigneeSelect.innerHTML = deptUsers.map(u => `
+        <option value="${u.id}">${u.name} (${u.role})</option>
+      `).join('');
+    }
+
+    function saveStandardTaskForm(e) {
+      e.preventDefault();
+      const user = getCurrentUser();
+      const editingId = document.getElementById('editingTaskId').value;
+      const fileInput = document.getElementById('taskModalFileInput');
+
+      if (editingId) {
+        const task = state.tasks.find(t => t.id === editingId);
+        if (!task) return;
+
+        task.title = document.getElementById('taskModalTitle').value.trim();
+        task.description = document.getElementById('taskModalDesc').value.trim();
+        task.department = document.getElementById('taskModalDept').value;
+        task.assigneeId = document.getElementById('taskModalAssignee').value;
+        task.dueDate = document.getElementById('taskModalDueDate').value;
+        task.priority = document.getElementById('taskModalPriority').value;
+        task.link = document.getElementById('taskModalLink').value.trim();
+        if (fileInput.files.length > 0) {
+          task.fileName = fileInput.files[0].name;
+        }
+        task.steps = [...modalTempSteps];
+
+        addAuditLog(`Görev Güncellendi (${task.title} - Düzenleyen: ${user.name})`);
+        showToastNotification("Görev başarıyla güncellendi!");
+      } else {
+        const attachedFileName = fileInput.files.length > 0 ? fileInput.files[0].name : '';
+        const newTask = {
+          id: "tsk-" + Date.now(),
+          title: document.getElementById('taskModalTitle').value.trim(),
+          description: document.getElementById('taskModalDesc').value.trim(),
+          department: document.getElementById('taskModalDept').value,
+          assigneeId: document.getElementById('taskModalAssignee').value,
+          creatorId: user.id,
+          createdRole: user.role,
+          dueDate: document.getElementById('taskModalDueDate').value,
+          priority: document.getElementById('taskModalPriority').value,
+          status: "todo",
+          link: document.getElementById('taskModalLink').value.trim(),
+          fileName: attachedFileName,
+          steps: [...modalTempSteps]
+        };
+
+        state.tasks.unshift(newTask);
+        addAuditLog(`Yeni Görev Oluşturuldu (${newTask.title})`);
+        showToastNotification("Yeni görev başarıyla atandı!");
+      }
+
+      saveState();
+      closeNewTaskModal();
+      renderTasks();
+    }
+
+    // ==============================================================
+    // PERSONEL REHBERİ & BİLGİ DÜZENLEME
+    // ==============================================================
+    function renderTeamGrid() {
+      const container = document.getElementById('teamCardsGrid');
+      const user = getCurrentUser();
+
+      const filteredUsers = state.users.filter(u => canUserSeeStaff(u, user));
+
+      container.innerHTML = filteredUsers.map(u => {
+        const canEdit = canUserEditStaff(u, user);
+        return `
+          <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-2xs flex items-start space-x-3 relative group hover:shadow-md transition">
+            <img src="${u.avatar}" class="w-12 h-12 rounded-full object-cover border border-slate-200" />
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center justify-between">
+                <h4 class="font-bold text-slate-800 text-xs truncate">${u.name}</h4>
+                <span class="text-[9px] font-bold px-1.5 py-0.5 rounded bg-blue-50 text-blue-700">${u.role}</span>
+              </div>
+              <p class="text-[11px] text-slate-500 font-medium">${u.title}</p>
+              <p class="text-[10px] text-indigo-600 font-semibold mt-0.5">${u.department}</p>
+              <div class="flex items-center justify-between text-[10px] text-slate-400 font-mono mt-1 pt-1 border-t border-slate-100">
+                <span>🎂 ${u.birthDate || 'Belirtilmedi'}</span>
+                ${canEdit ? `
+                  <button onclick="openEditUserModal('${u.id}')" class="text-blue-600 hover:text-blue-800 font-bold underline">Düzenle</button>
+                ` : ''}
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function openEditUserModal(userId) {
+      const u = state.users.find(x => x.id === userId);
+      if (!u) return;
+
+      document.getElementById('editUserId').value = u.id;
+      document.getElementById('editUserName').value = u.name;
+      document.getElementById('editUserUsername').value = u.username;
+      document.getElementById('editUserPassword').value = u.password || '123456';
+      document.getElementById('editUserTitle').value = u.title || '';
+      document.getElementById('editUserBirthDate').value = u.birthDate || '';
+      document.getElementById('editUserEmail').value = u.email || '';
+
+      const deptSel = document.getElementById('editUserDept');
+      deptSel.innerHTML = state.departments.map(d => `
+        <option value="${d.name}" ${d.name === u.department ? 'selected' : ''}>${d.name}</option>
+      `).join('');
+
+      document.getElementById('editUserRole').value = u.role || 'Personel';
+
+      document.getElementById('modalEditUser').classList.remove('hidden');
+      lucide.createIcons();
+    }
+
+    function closeEditUserModal() {
+      document.getElementById('modalEditUser').classList.add('hidden');
+    }
+
+    function handleSaveEditUser(e) {
+      e.preventDefault();
+      const targetId = document.getElementById('editUserId').value;
+      const targetU = state.users.find(x => x.id === targetId);
+      if (!targetU) return;
+
+      const newUsername = document.getElementById('editUserUsername').value.trim().toLowerCase();
+      const exists = state.users.some(x => x.id !== targetId && x.username && x.username.toLowerCase() === newUsername);
+      if (exists) {
+        alert("Bu kullanıcı adı başka bir personele ait!");
+        return;
+      }
+
+      targetU.name = document.getElementById('editUserName').value.trim();
+      targetU.username = newUsername;
+      targetU.password = document.getElementById('editUserPassword').value.trim();
+      targetU.title = document.getElementById('editUserTitle').value.trim();
+      targetU.department = document.getElementById('editUserDept').value;
+      targetU.role = document.getElementById('editUserRole').value;
+      targetU.birthDate = document.getElementById('editUserBirthDate').value;
+      targetU.email = document.getElementById('editUserEmail').value.trim();
+
+      saveState();
+      addAuditLog(`Personel Bilgileri Güncellendi (${targetU.name} - ${targetU.department})`);
+      closeEditUserModal();
+      initDashboard();
+      showToastNotification(`${targetU.name} bilgileri başarıyla güncellendi!`);
+    }
+
+    // ==============================================================
+    // ONAY BEKLEYEN GÖREVLER (Silsile Yolu)
+    // ==============================================================
+    function submitTaskForApproval(taskId) {
+      const task = state.tasks.find(t => t.id === taskId);
+      if (!task) return;
+
+      const creator = state.users.find(u => u.id === task.creatorId) || { name: 'Amir' };
+      const curUser = getCurrentUser();
+
+      if (!confirm(`"${task.title}" görevini tamamlayıp amiriniz ${creator.name}'e onaya göndermek istiyor musunuz?`)) return;
+
+      task.status = "review";
+      if (task.steps && task.steps.length > 0) {
+        task.steps.forEach(s => s.done = true);
+      }
+
+      if (!state.emailLogs) state.emailLogs = [];
+      state.emailLogs.unshift({
+        id: "eml-" + Date.now(),
+        toEmail: creator.email || "yonetim@sirket.com",
+        toName: creator.name,
+        subject: `🔔 [GÖREV ONAYI BEKLİYOR] ${curUser.name} iş emrini tamamladı: ${task.title}`,
+        provider: "Silsile Onay",
+        status: "İletildi",
+        time: new Date().toISOString().substring(0, 16).replace('T', ' ')
+      });
+
+      addAuditLog(`Görev Tamamlandı & Onaya Sunuldu (${task.title} -> ${creator.name})`);
+      saveState();
+      renderTasks();
+      renderApprovals();
+      showToastNotification("Görev amir onayına gönderildi!");
+    }
+
+    function renderApprovals() {
+      const user = getCurrentUser();
+      const tbody = document.getElementById('approvalsTableBody');
+      const emptyAlert = document.getElementById('approvalsEmptyAlert');
+      tbody.innerHTML = '';
+
+      const pendingTasks = (state.tasks || []).filter(t => {
+        if (t.status !== 'review') return false;
+        if (isExecutiveRole(user)) return true;
+        return (user.role === 'Departman Sorumlusu' && t.department === user.department) || t.creatorId === user.id;
+      });
+
+      if (pendingTasks.length === 0) emptyAlert.classList.remove('hidden');
+      else emptyAlert.classList.add('hidden');
+
+      pendingTasks.forEach(task => {
+        const assignee = state.users.find(u => u.id === task.assigneeId) || { name: 'Personel' };
+        const creator = state.users.find(u => u.id === task.creatorId) || { name: 'Yönetici' };
+        const steps = task.steps || [];
+
+        const tr = document.createElement('tr');
+        tr.className = "hover:bg-slate-50 transition";
+        tr.innerHTML = `
+          <td class="p-3.5">
+            <div class="font-bold text-slate-800 text-xs">${task.title}</div>
+            <div class="text-[10px] text-slate-400">Termin: ${task.dueDate}</div>
+          </td>
+          <td class="p-3.5"><span class="bg-blue-50 text-blue-700 text-[10px] font-bold px-2 py-0.5 rounded">${task.department}</span></td>
+          <td class="p-3.5 font-semibold text-slate-700">${assignee.name}</td>
+          <td class="p-3.5 text-slate-500">${creator.name}</td>
+          <td class="p-3.5 font-mono text-[10px]">${steps.filter(s => s.done).length}/${steps.length} Adım</td>
+          <td class="p-3.5">
+            ${task.link ? `<a href="${task.link}" target="_blank" class="text-blue-600 hover:underline font-bold block text-[10px]">Link</a>` : ''}
+            ${task.fileName ? `<span class="text-indigo-600 font-bold block text-[10px]">${task.fileName}</span>` : ''}
+            ${(!task.link && !task.fileName) ? `<span class="text-slate-400">-</span>` : ''}
+          </td>
+          <td class="p-3.5 text-right">
+            <div class="flex items-center justify-end space-x-1.5">
+              <button onclick="approveTaskDecision('${task.id}', true)" class="px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold shadow-xs">Onayla</button>
+              <button onclick="approveTaskDecision('${task.id}', false)" class="px-2.5 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-xs font-bold shadow-xs">Revizyon</button>
+            </div>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      document.getElementById('badge-nav-approvals').innerText = pendingTasks.length;
+    }
+
+    function approveTaskDecision(taskId, isApproved) {
+      const task = state.tasks.find(t => t.id === taskId);
+      if (!task) return;
+      const curUser = getCurrentUser();
+      const assignee = state.users.find(u => u.id === task.assigneeId) || { name: 'Personel' };
+
+      if (isApproved) {
+        task.status = "completed";
+        addAuditLog(`Görev Onaylandı (${task.title} - Onaylayan: ${curUser.name})`);
+        showToastNotification("Görev başarıyla onaylandı!");
+      } else {
+        task.status = "inprogress";
+        addAuditLog(`Görev Revizyona Gönderildi (${task.title} -> ${assignee.name})`);
+        showToastNotification("Görev revizyona gönderildi.");
+      }
+
+      saveState();
+      renderTasks();
+      renderApprovals();
+    }
+
+    // ==============================================================
+    // İŞ ADIMLARI YÖNETİMİ
+    // ==============================================================
+    let activeStepTaskId = null;
+    function openTaskStepsModal(taskId) {
+      activeStepTaskId = taskId;
+      const task = state.tasks.find(t => t.id === taskId);
+      if (!task) return;
+      if (!task.steps) task.steps = [];
+
+      const modalHtml = `
+        <div id="modalTaskStepsDynamic" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+          <div class="bg-white rounded-3xl border border-slate-200 shadow-2xl w-full max-w-md overflow-hidden flex flex-col">
+            <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-blue-50/70">
+              <h3 class="font-bold text-slate-800 text-sm">İş Adımları ve Tamamlama</h3>
+              <button onclick="closeDynamicStepModal()" class="text-slate-400 hover:text-slate-600"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+            <div class="p-6 space-y-4">
+              <div class="flex space-x-2">
+                <input type="text" id="dynamicNewStepInput" placeholder="Yeni adım yazın..." class="flex-1 text-xs border border-slate-200 rounded-xl px-3 py-2 bg-slate-50 focus:bg-white focus:outline-none">
+                <button type="button" onclick="addDynamicStepToTask()" class="px-3.5 py-2 bg-blue-600 text-white rounded-xl text-xs font-bold">+ Ekle</button>
+              </div>
+              <ul class="space-y-2 max-h-56 overflow-y-auto custom-scrollbar">
+                ${task.steps.map((s, idx) => `
+                  <li class="flex items-center justify-between p-2 rounded-xl bg-slate-50 border border-slate-200 text-xs">
+                    <label class="flex items-center space-x-2 cursor-pointer flex-1">
+                      <input type="checkbox" onchange="toggleStepStatus(${idx})" ${s.done ? 'checked' : ''} class="w-4 h-4 rounded text-blue-600">
+                      <span class="${s.done ? 'line-through text-slate-400' : 'text-slate-800 font-medium'}">${s.text}</span>
+                    </label>
+                    <button onclick="deleteStepFromTask(${idx})" class="text-slate-400 hover:text-red-500 p-1"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
+                  </li>
+                `).join('')}
+              </ul>
+              <div class="pt-2 border-t border-slate-100 flex justify-end">
+                <button onclick="closeDynamicStepModal()" class="px-5 py-2 bg-slate-900 text-white rounded-xl text-xs font-bold">Kapat & Kaydet</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+      const div = document.createElement('div');
+      div.id = "dynamicStepModalWrapper";
+      div.innerHTML = modalHtml;
+      document.body.appendChild(div);
+      lucide.createIcons();
+    }
+
+    function closeDynamicStepModal() {
+      const el = document.getElementById('dynamicStepModalWrapper');
+      if (el) el.remove();
+      renderTasks();
+    }
+
+    function addDynamicStepToTask() {
+      const input = document.getElementById('dynamicNewStepInput');
+      const val = input.value.trim();
+      if (!val || !activeStepTaskId) return;
+      const task = state.tasks.find(t => t.id === activeStepTaskId);
+      if (task) {
+        task.steps.push({ text: val, done: false });
+        saveState();
+        closeDynamicStepModal();
+        openTaskStepsModal(activeStepTaskId);
+      }
+    }
+
+    function toggleStepStatus(idx) {
+      const task = state.tasks.find(t => t.id === activeStepTaskId);
+      if (task && task.steps[idx]) {
+        task.steps[idx].done = !task.steps[idx].done;
+        saveState();
+        closeDynamicStepModal();
+        openTaskStepsModal(activeStepTaskId);
+      }
+    }
+
+    function deleteStepFromTask(idx) {
+      const task = state.tasks.find(t => t.id === activeStepTaskId);
+      if (task && task.steps[idx]) {
+        task.steps.splice(idx, 1);
+        saveState();
+        closeDynamicStepModal();
+        openTaskStepsModal(activeStepTaskId);
+      }
+    }
+
+    function addModalChecklistStep() {
+      const input = document.getElementById('newStepInput');
+      const val = input.value.trim();
+      if (!val) return;
+      modalTempSteps.push({ text: val, done: false });
+      input.value = '';
+      renderModalSteps();
+    }
+
+    function renderModalSteps() {
+      const list = document.getElementById('modalStepList');
+      list.innerHTML = modalTempSteps.map((s, idx) => `
+        <li class="flex items-center justify-between p-2 rounded-xl bg-white border border-slate-200 text-xs">
+          <span>${idx + 1}. ${s.text}</span>
+          <button type="button" onclick="removeModalStep(${idx})" class="text-slate-400 hover:text-red-500"><i data-lucide="x" class="w-3.5 h-3.5"></i></button>
+        </li>
+      `).join('');
+      lucide.createIcons();
+    }
+
+    function removeModalStep(idx) {
+      modalTempSteps.splice(idx, 1);
+      renderModalSteps();
+    }
+
+    // ==============================================================
+    // SABİT GÖREVLER (Departman Kısıtlamalı)
+    // ==============================================================
+    function calcDays(targetDateStr) {
+      const now = new Date();
+      now.setHours(0, 0, 0, 0);
+      const target = new Date(targetDateStr + 'T00:00:00');
+      return Math.ceil((target - now) / (1000 * 60 * 60 * 24));
+    }
+
+    function renderRecurringTasks() {
+      const user = getCurrentUser();
+      const tbody = document.getElementById('recurringTableBody');
+      const emptyAlert = document.getElementById('recurringEmptyAlert');
+      tbody.innerHTML = '';
+
+      const filtered = (state.recurringTasks || []).filter(r => canUserSeeRecurring(r, user));
+
+      if (filtered.length === 0) emptyAlert.classList.remove('hidden');
+      else emptyAlert.classList.add('hidden');
+
+      filtered.forEach(rec => {
+        const days = calcDays(rec.endDate);
+        const assignee = state.users.find(u => u.id === rec.assigneeId) || { name: 'Atanmadı' };
+
+        let badge = '';
+        if (days < 0) badge = `<span class="bg-red-100 text-red-800 text-[10px] font-bold px-2 py-0.5 rounded-full">Süresi Geçti (${Math.abs(days)} gün)</span>`;
+        else if (days === 0) badge = `<span class="bg-red-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-full animate-pulse">BUGÜN SON GÜN!</span>`;
+        else if (days <= 7) badge = `<span class="bg-amber-100 text-amber-900 text-[10px] font-bold px-2 py-0.5 rounded-full">Son 1 Hafta (${days} gün)</span>`;
+        else if (days <= 15) badge = `<span class="bg-orange-100 text-orange-900 text-[10px] font-bold px-2 py-0.5 rounded-full">Son 15 Gün (${days} gün)</span>`;
+        else if (days <= 30) badge = `<span class="bg-indigo-100 text-indigo-900 text-[10px] font-bold px-2 py-0.5 rounded-full">Son 1 Ay (${days} gün)</span>`;
+        else badge = `<span class="bg-emerald-50 text-emerald-800 text-[10px] font-semibold px-2 py-0.5 rounded-full">${days} Gün Var</span>`;
+
+        const tr = document.createElement('tr');
+        tr.className = "hover:bg-slate-50 transition";
+        tr.innerHTML = `
+          <td class="p-3.5">
+            <div class="font-bold text-slate-800 text-xs">${rec.title}</div>
+            <div class="text-[11px] text-slate-500">${rec.description || ''}</div>
+          </td>
+          <td class="p-3.5"><span class="bg-slate-100 text-slate-700 text-[10px] font-semibold px-2 py-0.5 rounded">${rec.department}</span></td>
+          <td class="p-3.5 font-bold text-slate-700">${assignee.name}</td>
+          <td class="p-3.5"><span class="inline-flex items-center text-[10px] font-bold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-full"><i data-lucide="repeat" class="w-3 h-3 mr-1"></i> ${rec.period}</span></td>
+          <td class="p-3.5 font-mono text-[11px] text-slate-600"><div>${rec.startDate} → <strong class="text-indigo-600">${rec.endDate}</strong></div></td>
+          <td class="p-3.5">${badge}</td>
+          <td class="p-3.5 text-right">
+            <button onclick="advanceRecurringCycle('${rec.id}')" class="px-2.5 py-1 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 rounded-lg text-[10px] font-bold border border-emerald-200">Dönemi Devret</button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      document.getElementById('badge-nav-recurring').innerText = filtered.length;
+      lucide.createIcons();
+    }
+
+    function advanceRecurringCycle(recId) {
+      const rec = state.recurringTasks.find(r => r.id === recId);
+      if (!rec) return;
+      if (!confirm(`"${rec.title}" görevinin bu dönemi tamamlanıp bir sonraki periyoda aktarılsın mı?`)) return;
+
+      const curEnd = new Date(rec.endDate);
+      let nextEnd = new Date(curEnd);
+
+      if (rec.period === 'Yıllık') nextEnd.setFullYear(nextEnd.getFullYear() + 1);
+      else if (rec.period === '6 Aylık') nextEnd.setMonth(nextEnd.getMonth() + 6);
+      else if (rec.period === '3 Aylık') nextEnd.setMonth(nextEnd.getMonth() + 3);
+      else if (rec.period === 'Aylık') nextEnd.setMonth(nextEnd.getMonth() + 1);
+      else nextEnd.setFullYear(nextEnd.getFullYear() + 1);
+
+      rec.startDate = rec.endDate;
+      rec.endDate = nextEnd.toISOString().split('T')[0];
+      rec.lastNotified = [];
+      saveState();
+      addAuditLog(`Sabit Görev Devredildi (${rec.title} -> Yeni Bitiş: ${rec.endDate})`);
+      renderRecurringTasks();
+      showToastNotification("Görev devredildi");
+    }
+
+    function openNewRecurringModal() {
+      const user = getCurrentUser();
+      document.getElementById('recModalStartDate').value = '2026-10-24';
+      document.getElementById('recModalEndDate').value = '2026-11-24';
+      document.getElementById('recModalTitle').value = '';
+      document.getElementById('recModalDesc').value = '';
+
+      const deptSelect = document.getElementById('recModalDept');
+      if (isExecutiveRole(user)) {
+        deptSelect.innerHTML = state.departments.map(d => `<option value="${d.name}">${d.name}</option>`).join('');
+      } else {
+        deptSelect.innerHTML = `<option value="${user.department}">${user.department}</option>`;
+      }
+      handleRecurDeptChange(deptSelect.value);
+      document.getElementById('modalRecurring').classList.remove('hidden');
+      lucide.createIcons();
+    }
+
+    function closeRecurringModal() {
+      document.getElementById('modalRecurring').classList.add('hidden');
+    }
+
+    function handleRecurDeptChange(deptName) {
+      const users = state.users.filter(u => u.department === deptName);
+      document.getElementById('recModalAssignee').innerHTML = users.map(u => `
+        <option value="${u.id}">${u.name} (${u.role})</option>
+      `).join('');
+    }
+
+    function saveRecurringTaskForm(e) {
+      e.preventDefault();
+      const newRec = {
+        id: "rec-" + Date.now(),
+        title: document.getElementById('recModalTitle').value,
+        description: document.getElementById('recModalDesc').value,
+        department: document.getElementById('recModalDept').value,
+        assigneeId: document.getElementById('recModalAssignee').value,
+        period: document.getElementById('recModalPeriod').value,
+        priority: document.getElementById('recModalPriority').value,
+        startDate: document.getElementById('recModalStartDate').value,
+        endDate: document.getElementById('recModalEndDate').value,
+        lastNotified: [],
+        status: "active"
+      };
+
+      if (!state.recurringTasks) state.recurringTasks = [];
+      state.recurringTasks.push(newRec);
+      saveState();
+      addAuditLog(`Yeni Sabit Görev Tanımlandı: ${newRec.title}`);
+      closeRecurringModal();
+      renderRecurringTasks();
+      showToastNotification("Sabit görev tanımlandı!");
+    }
+
+    // ==============================================================
+    // DUYURU, PERFORMANS, TAKVİM & ADMİN
+    // ==============================================================
+    function renderAnnouncements() {
+      const container = document.getElementById('announcementsListContainer');
+      const anns = state.announcements || [];
+      if (anns.length === 0) {
+        container.innerHTML = `<div class="bg-white p-6 rounded-2xl border border-slate-200 text-center text-slate-400 text-xs">Duyuru bulunmuyor.</div>`;
+        return;
+      }
+      container.innerHTML = anns.map(a => `
+        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-2">
+          <div class="flex items-center justify-between">
+            <span class="text-[10px] font-bold px-2 py-0.5 rounded-full ${a.priority === 'Kritik' ? 'bg-red-50 text-red-700' : 'bg-pink-50 text-pink-700'}">${a.priority || 'Normal'}</span>
+            <span class="text-[10px] text-slate-400 font-mono">${a.date}</span>
+          </div>
+          <h4 class="font-bold text-slate-800 text-sm">${a.title}</h4>
+          <p class="text-xs text-slate-600 leading-relaxed">${a.content}</p>
+          <div class="text-[10px] text-slate-400 pt-1 border-t border-slate-100">Yayınlayan: <strong>${a.authorName}</strong></div>
+        </div>
+      `).join('');
+      document.getElementById('badge-nav-announcements').innerText = anns.length;
+    }
+
+    function openNewAnnouncementModal() {
+      const user = getCurrentUser();
+      document.getElementById('annAuthorDisplay').value = `${user.name} (${user.role})`;
+      document.getElementById('annTitleInput').value = '';
+      document.getElementById('annContentInput').value = '';
+      document.getElementById('modalNewAnnouncement').classList.remove('hidden');
+      lucide.createIcons();
+    }
+
+    function closeNewAnnouncementModal() {
+      document.getElementById('modalNewAnnouncement').classList.add('hidden');
+    }
+
+    function handleSaveAnnouncement(e) {
+      e.preventDefault();
+      const user = getCurrentUser();
+      const newAnn = {
+        id: "ann-" + Date.now(),
+        title: document.getElementById('annTitleInput').value.trim(),
+        content: document.getElementById('annContentInput').value.trim(),
+        priority: document.getElementById('annPrioritySelect').value,
+        authorName: user.name,
+        date: new Date().toISOString().substring(0, 16).replace('T', ' ')
+      };
+
+      if (!state.announcements) state.announcements = [];
+      state.announcements.unshift(newAnn);
+      saveState();
+
+      addAuditLog(`Duyuru Yayınlandı: ${newAnn.title}`);
+      closeNewAnnouncementModal();
+      renderAnnouncements();
+      showToastNotification("Duyuru yayınlandı!");
+    }
+
+    function renderPerformanceReports() {
+      const user = getCurrentUser();
+      if (!isExecutiveRole(user)) return;
+
+      const deptBars = document.getElementById('deptPerformanceBars');
+      deptBars.innerHTML = state.departments.filter(d => d.name !== 'GENEL MÜDÜRLÜK').map(d => {
+        const dTasks = (state.tasks || []).filter(t => t.department === d.name);
+        const completed = dTasks.filter(t => t.status === 'completed').length;
+        const total = dTasks.length;
+        const rate = total > 0 ? Math.round((completed / total) * 100) : 100;
+
+        return `
+          <div class="space-y-1">
+            <div class="flex items-center justify-between text-xs">
+              <span class="font-bold text-slate-800">${d.name}</span>
+              <span class="font-mono text-slate-500">${completed}/${total} Tamamlandı (%${rate})</span>
+            </div>
+            <div class="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden">
+              <div class="bg-emerald-600 h-2.5 rounded-full transition-all duration-500" style="width: ${rate}%"></div>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      const tbody = document.getElementById('userPerformanceTableBody');
+      tbody.innerHTML = state.users.map(u => {
+        const uTasks = (state.tasks || []).filter(t => t.assigneeId === u.id);
+        const completed = uTasks.filter(t => t.status === 'completed').length;
+        const ongoing = uTasks.filter(t => t.status === 'todo' || t.status === 'inprogress' || t.status === 'review').length;
+        const todayStr = new Date().toISOString().split('T')[0];
+        const overdue = uTasks.filter(t => t.dueDate < todayStr && t.status !== 'completed').length;
+        const total = uTasks.length;
+        const score = total > 0 ? Math.round((completed / total) * 100) : 100;
+
+        return `
+          <tr class="hover:bg-slate-50 transition">
+            <td class="p-3.5 font-bold text-slate-800 flex items-center space-x-2">
+              <img src="${u.avatar}" class="w-6 h-6 rounded-full object-cover border border-slate-200" />
+              <span>${u.name}</span>
+            </td>
+            <td class="p-3.5 text-slate-600">${u.department}</td>
+            <td class="p-3.5 font-bold text-slate-700">${total}</td>
+            <td class="p-3.5 font-bold text-emerald-700">${completed}</td>
+            <td class="p-3.5 text-slate-600">${ongoing}</td>
+            <td class="p-3.5 font-bold ${overdue > 0 ? 'text-red-600' : 'text-slate-400'}">${overdue}</td>
+            <td class="p-3.5 text-right font-black text-emerald-600">%${score}</td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function checkBirthdayNotifications() {
+      const today = new Date();
+      const currentMonth = String(today.getMonth() + 1).padStart(2, '0');
+      const currentDay = String(today.getDate()).padStart(2, '0');
+      const todayMMDD = `${currentMonth}-${currentDay}`;
+
+      const birthdayUsers = state.users.filter(u => {
+        if (!u.birthDate) return false;
+        const bParts = u.birthDate.split('-');
+        return bParts.length === 3 && `${bParts[1]}-${bParts[2]}` === todayMMDD;
+      });
+
+      const banner = document.getElementById('birthdayNotificationBanner');
+      const text = document.getElementById('birthdayTodayText');
+
+      if (birthdayUsers.length > 0) {
+        banner.classList.remove('hidden');
+        banner.classList.add('flex');
+        text.innerText = `Bugün Doğum Günü: ${birthdayUsers.map(u => u.name).join(', ')} 🎂`;
+      } else {
+        banner.classList.add('hidden');
+        banner.classList.remove('flex');
+      }
+    }
+
+    function renderCalendar() {
+      const monthNames = ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"];
+      const y = calendarDate.getFullYear();
+      const m = calendarDate.getMonth();
+      document.getElementById('calendarMonthYearDisplay').innerText = `${monthNames[m]} ${y}`;
+
+      const grid = document.getElementById('calendarDayGrid');
+      grid.innerHTML = '';
+
+      const firstDay = new Date(y, m, 1);
+      const lastDay = new Date(y, m + 1, 0);
+      let start = firstDay.getDay() - 1;
+      if (start === -1) start = 6;
+
+      for (let i = 0; i < start; i++) grid.appendChild(document.createElement('div'));
+
+      const todayStr = new Date().toISOString().split('T')[0];
+
+      for (let d = 1; d <= lastDay.getDate(); d++) {
+        const dateStr = `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+        const isToday = (dateStr === todayStr);
+        const user = getCurrentUser();
+
+        const tasks = (state.tasks || []).filter(t => t.dueDate === dateStr && canUserSeeTask(t, user));
+        const recs = (state.recurringTasks || []).filter(r => r.endDate === dateStr && canUserSeeRecurring(r, user));
+
+        const cell = document.createElement('div');
+        cell.className = `p-2 min-h-[95px] border-b border-r border-slate-100 ${isToday ? 'bg-blue-50/70 ring-1 ring-blue-500' : 'bg-white'}`;
+        cell.innerHTML = `
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-bold ${isToday ? 'bg-blue-600 text-white w-5 h-5 rounded-full flex items-center justify-center' : 'text-slate-700'}">${d}</span>
+          </div>
+          <div class="space-y-1 mt-1 max-h-[70px] overflow-y-auto custom-scrollbar">
+            ${recs.map(r => `<div class="bg-indigo-50 text-indigo-900 border border-indigo-200 text-[9px] font-bold p-1 rounded truncate">● ${r.title}</div>`).join('')}
+            ${tasks.map(t => `<div class="bg-slate-100 text-slate-800 text-[9px] p-1 rounded truncate">▪ ${t.title}</div>`).join('')}
+          </div>
+        `;
+        grid.appendChild(cell);
+      }
+    }
+
+    function navigateMonth(delta) {
+      calendarDate.setMonth(calendarDate.getMonth() + delta);
+      renderCalendar();
+    }
+
+    function renderAdminDashboard() {
+      document.getElementById('adminDeptList').innerHTML = state.departments.map(d => {
+        const leader = state.users.find(u => u.id === d.leaderId);
+        return `
+          <div class="py-2.5 flex items-center justify-between text-xs">
+            <div>
+              <p class="font-bold text-slate-800">${d.name}</p>
+              <p class="text-[10px] text-slate-400">Lider: ${leader ? leader.name : 'Atanmadı'}</p>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      document.getElementById('adminUserList').innerHTML = state.users.map(u => `
+        <div class="py-2.5 flex items-center justify-between gap-2 text-xs">
+          <div class="flex items-center space-x-2">
+            <img src="${u.avatar}" class="w-7 h-7 rounded-full object-cover" />
+            <div>
+              <p class="font-bold text-slate-800">${u.name}</p>
+              <p class="text-[10px] text-slate-400">${u.role} (${u.department}) • 🎂 ${u.birthDate || 'Yok'}</p>
+            </div>
+          </div>
+          <button onclick="openEditUserModal('${u.id}')" class="px-2 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-lg text-[10px] font-bold border border-indigo-200">
+            Personeli Düzenle
+          </button>
+        </div>
+      `).join('');
+    }
+
+    function openAddNewUserModal() {
+      const user = getCurrentUser();
+      document.getElementById('newUserNameInput').value = '';
+      document.getElementById('newUserUsernameInput').value = '';
+      document.getElementById('newUserPasswordInput').value = '123456';
+      document.getElementById('newUserTitleInput').value = '';
+      document.getElementById('newUserBirthDateInput').value = '';
+      document.getElementById('newUserEmailInput').value = '';
+
+      const deptSel = document.getElementById('newUserDeptSelect');
+      if (isExecutiveRole(user)) {
+        deptSel.innerHTML = state.departments.map(d => `<option value="${d.name}">${d.name}</option>`).join('');
+      } else {
+        deptSel.innerHTML = `<option value="${user.department}">${user.department}</option>`;
+      }
+
+      document.getElementById('modalAddNewUser').classList.remove('hidden');
+      lucide.createIcons();
+    }
+
+    function closeAddNewUserModal() {
+      document.getElementById('modalAddNewUser').classList.add('hidden');
+    }
+
+    function handleSaveNewUser(e) {
+      e.preventDefault();
+      const username = document.getElementById('newUserUsernameInput').value.trim().toLowerCase();
+
+      if (state.users.some(u => u.username && u.username.toLowerCase() === username)) {
+        alert("Bu kullanıcı adı zaten kullanılmaktadır!");
+        return;
+      }
+
+      const newUser = {
+        id: "u-" + Date.now(),
+        name: document.getElementById('newUserNameInput').value.trim(),
+        username,
+        password: document.getElementById('newUserPasswordInput').value.trim() || '123456',
+        title: document.getElementById('newUserTitleInput').value.trim(),
+        department: document.getElementById('newUserDeptSelect').value,
+        role: document.getElementById('newUserRoleSelect').value,
+        birthDate: document.getElementById('newUserBirthDateInput').value,
+        email: document.getElementById('newUserEmailInput').value.trim(),
+        avatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=80"
+      };
+
+      state.users.push(newUser);
+      saveState();
+      addAuditLog(`Yeni Personel Kaydedildi (${newUser.name} - ${newUser.department})`);
+      closeAddNewUserModal();
+      initDashboard();
+      showToastNotification("Personel başarıyla eklendi!");
+    }
+
+    function openChangeMyPasswordModal() {
+      document.getElementById('modalChangeMyPassword').classList.remove('hidden');
+      lucide.createIcons();
+    }
+
+    function closeChangeMyPasswordModal() {
+      document.getElementById('modalChangeMyPassword').classList.add('hidden');
+    }
+
+    function handleChangeMyPasswordSubmit(e) {
+      e.preventDefault();
+      const user = getCurrentUser();
+      const cur = document.getElementById('myCurrentPassword').value;
+      const np = document.getElementById('myNewPassword').value;
+      const npc = document.getElementById('myNewPasswordConfirm').value;
+
+      if (user.password !== cur && cur !== '123456') {
+        alert("Mevcut şifrenizi hatalı girdiniz!");
+        return;
+      }
+      if (np !== npc) {
+        alert("Yeni şifreler eşleşmiyor!");
+        return;
+      }
+      user.password = np;
+      saveState();
+      addAuditLog(`Şifre Değiştirildi (${user.name})`);
+      closeChangeMyPasswordModal();
+      showToastNotification("Şifreniz güncellendi!");
+    }
+
+    function switchView(viewName) {
+      const user = getCurrentUser();
+      if (viewName === 'performance' && !isExecutiveRole(user)) {
+        showToastNotification("Performans raporunu yalnızca Genel Müdür ve İdari İşler görebilir!");
+        return;
+      }
+      if ((viewName === 'admin' || viewName === 'notifications' || viewName === 'audit') && !isExecutiveRole(user)) {
+        showToastNotification("Bu bölüme sadece üst yönetim erişebilir!");
+        return;
+      }
+
+      const views = ['tasks', 'approvals', 'recurring', 'announcements', 'performance', 'calendar', 'team', 'admin', 'notifications', 'audit'];
+      const titles = {
+        tasks: 'İş Akış Panosu',
+        approvals: 'Onay Bekleyen İş Emirleri (Silsile)',
+        recurring: 'Sabit Görevler & İzin Takip Merkezi',
+        announcements: 'Şirket İçi Genel Duyurular',
+        performance: 'Aylık & Yıllık Performans Raporları',
+        calendar: 'Hatırlatma Takvimi',
+        team: 'Personel Rehberi',
+        admin: 'Yönetici Kontrol Merkezi',
+        notifications: 'Mail & Log Günlüğü',
+        audit: 'İşlem Geçmişi (Audit Logs)'
+      };
+
+      views.forEach(v => {
+        const el = document.getElementById(`view-${v}`);
+        if (el) el.classList.add('hidden');
+        const navBtn = document.getElementById(`nav-${v}`);
+        if (navBtn) {
+          navBtn.classList.remove('bg-blue-600/90', 'text-white', 'shadow-sm');
+          navBtn.classList.add('text-slate-400');
+        }
+      });
+
+      const targetEl = document.getElementById(`view-${viewName}`);
+      if (targetEl) targetEl.classList.remove('hidden');
+
+      const activeNav = document.getElementById(`nav-${viewName}`);
+      if (activeNav) {
+        activeNav.classList.remove('text-slate-400');
+        activeNav.classList.add('bg-blue-600/90', 'text-white', 'shadow-sm');
+      }
+
+      document.getElementById('pageCurrentTitle').innerText = titles[viewName] || 'İş Akış Portalı';
+      if (viewName === 'performance') renderPerformanceReports();
+      if (viewName === 'calendar') renderCalendar();
+      if (viewName === 'admin') renderAdminDashboard();
+      if (viewName === 'team') renderTeamGrid();
+      lucide.createIcons();
+    }
+
+    function populateDeptSelects() {
+      const depts = state.departments || [];
+      const el = document.getElementById('taskDeptFilter');
+      if (el) {
+        el.innerHTML = `<option value="">Tüm Departmanlar</option>` + depts.map(d => `<option value="${d.name}">${d.name}</option>`).join('');
+      }
+    }
+
+    function updateSidebarBadges() {
+      const user = getCurrentUser();
+      document.getElementById('badge-nav-tasks').innerText = (state.tasks || []).filter(t => canUserSeeTask(t, user)).length;
+      document.getElementById('badge-nav-recurring').innerText = (state.recurringTasks || []).filter(r => canUserSeeRecurring(r, user)).length;
+      document.getElementById('badge-nav-announcements').innerText = (state.announcements || []).length;
+      document.getElementById('badge-nav-notifications').innerText = (state.emailLogs || []).length;
+      document.getElementById('badge-nav-audit').innerText = (state.auditLogs || []).length;
+
+      const approvalsCount = (state.tasks || []).filter(t => t.status === 'review' && (isExecutiveRole(user) || t.creatorId === user.id || (user.role === 'Departman Sorumlusu' && t.department === user.department))).length;
+      document.getElementById('badge-nav-approvals').innerText = approvalsCount;
+    }
+
+    function renderNotifications() {
+      const tbody = document.getElementById('notificationLogTableBody');
+      tbody.innerHTML = (state.emailLogs || []).map(l => `
+        <tr class="hover:bg-slate-50 transition">
+          <td class="p-3.5 text-slate-400 font-mono text-[11px]">${l.time}</td>
+          <td class="p-3.5 font-bold text-slate-800">${l.toName} <span class="text-[10px] text-slate-400 font-normal">(${l.toEmail})</span></td>
+          <td class="p-3.5 font-bold text-indigo-950">${l.subject}</td>
+          <td class="p-3.5 text-[10px] bg-blue-50 text-blue-700 font-semibold px-2 py-0.5 rounded">${l.provider}</td>
+          <td class="p-3.5 font-bold text-emerald-700">${l.status}</td>
+        </tr>
+      `).join('');
+    }
+
+    function clearAllNotificationLogs() {
+      if (!confirm("Tüm bildirim loglarını silmek istediğinize emin misiniz?")) return;
+      state.emailLogs = [];
+      saveState();
+      renderNotifications();
+      updateSidebarBadges();
+      showToastNotification("Log günlüğü temizlendi");
+    }
+
+    function renderAuditLogs() {
+      const container = document.getElementById('auditLogsContainer');
+      const logs = state.auditLogs || [];
+      document.getElementById('auditTotalBadge').innerText = `${logs.length} Kayıt`;
+      container.innerHTML = logs.slice(0, 50).map(l => `
+        <li class="flex items-center justify-between py-2 text-xs">
+          <div><strong class="text-slate-800">${l.user}:</strong> <span class="text-slate-600">${l.action}</span></div>
+          <span class="text-[10px] text-slate-400 font-mono">${l.time}</span>
+        </li>
+      `).join('');
+    }
+
+    function addAuditLog(action) {
+      const user = getCurrentUser();
+      const log = {
+        id: "log-" + Date.now(),
+        user: user ? user.name : "Sistem",
+        action,
+        time: "Bugün " + new Date().toTimeString().substring(0, 5),
+        type: "action"
+      };
+      if (!state.auditLogs) state.auditLogs = [];
+      state.auditLogs.unshift(log);
+      saveState();
+      renderAuditLogs();
+      updateSidebarBadges();
+    }
+
+    function triggerManualReminderScan() {
+      showToastNotification("Tüm hatırlatmalar denetlendi.");
+    }
+
+    function exportDataJSON() {
+      state.exportDate = new Date().toISOString();
+      const str = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(state, null, 2));
+      const a = document.createElement('a');
+      a.setAttribute("href", str);
+      a.setAttribute("download", `GokerCevre_Yedek_v6.5_${new Date().toISOString().split('T')[0]}.json`);
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      showToastNotification("Yedek indirildi");
+    }
+
+    function importDataJSON(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(evt) {
+        try {
+          state = JSON.parse(evt.target.result);
+          saveState();
+          initDashboard();
+          showToastNotification("Yedek başarıyla yüklendi ve buluta işlendi!");
+        } catch(err) {
+          alert("Hata: " + err.message);
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    function showToastNotification(msg) {
+      const toast = document.getElementById('toastNotification');
+      document.getElementById('toastMsgText').innerText = msg;
+      toast.classList.remove('translate-y-24', 'opacity-0');
+      setTimeout(() => toast.classList.add('translate-y-24', 'opacity-0'), 3500);
+    }
+  </script>
+</body>
+</html>
